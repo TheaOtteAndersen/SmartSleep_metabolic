@@ -5,11 +5,17 @@
 
 library(dplyr)
 library(matrixStats)
+library(mice)
 
 #Reading in the data
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
+load("H:/SmartSleep backup IT issues/imputation/myImputationCSS-res-00001.RData")
+CSS0 <- imp_CSS$data
+CSS0$impnr=0
 CSS <- read.csv2("Citizen Science Sample/imp_citizenScience.csv")
-CSS <- subset(CSS,impnr!=0)
+CSS <- rbind(CSS0,CSS)
+
+#CSS <- subset(CSS,impnr!=0)
 
 subject_tracking_clusters <- read.csv2("H:/SmartSleep backup IT issues/subject_tracking_clusters.csv") #Change to S-drive location
 
@@ -104,7 +110,15 @@ hist(simulate(new_model),breaks=10,xlim=c(0.91,0.96))
 summary(new_model)
 
 
-#Estimates adjusted with Rubin's rules
+
+#Method 1: Using the mice package with mids objects
+base_data_mids <- as.mids(base_data,.imp="imputation")
+summary(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids,family=binomial))
+summary(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids,family=binomial))
+summay(lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids))
+
+
+#Method 2: Estimates adjusted with Rubin's rules (raw computations)
 
 sd25<-sd30<-sdnum<-
   matrix(nrow=length(summary(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data))$coefficients[,2]),ncol=20)
@@ -114,13 +128,13 @@ est25<-est30<-estnum<-
 
 
 for (i in 1:20){
-  sd25[,i]<-summary(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,2]
-  sd30[,i]<-summary(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,2]
-  sdnum[,i]<-summary(glm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,2]
+  sd25[,i]<-summary(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i),family=binomial))$coefficients[,2]
+  sd30[,i]<-summary(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i),family=binomial))$coefficients[,2]
+  sdnum[,i]<-summary(lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,2]
   
-  est25[,i]<-summary(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,1]
-  est30[,i]<-summary(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,1]
-  estnum[,i]<-summary(glm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,1]
+  est25[,i]<-summary(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i),family=binomial))$coefficients[,1]
+  est30[,i]<-summary(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i),family=binomial))$coefficients[,1]
+  estnum[,i]<-summary(lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation==i)))$coefficients[,1]
 }
 
 sd25Value<-sqrt(rowMeans(sd25^2)+rowSums((est25-rowMeans(est25))^2)/19) # sqrt(mean estimator variance + estimated imputation estimator variance): SE=sqrt(V_total).
@@ -129,31 +143,35 @@ sdnumValue<-sqrt(rowMeans(sdnum^2)+rowSums((estnum-rowMeans(estnum))^2)/19)
 
 
 #Summary tables:
-bmi25_indicator_table <- data.frame("ests"<-coef(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),
+bmi25_indicator_table <- data.frame("ests"<-coef(glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0),family=binomial)),
                                        "sds"<- sd25Value)
-bmi30_indicator_table <- data.frame("ests"<-coef(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),
+bmi30_indicator_table <- data.frame("ests"<-coef(glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0),family=binomial)),
                                          "sds"<- sd30Value)
-bmi_num_table <- data.frame("ests"<-coef(glm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),
+bmi_num_table <- data.frame("ests"<-coef(lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),
                                            "sds"<- sdnumValue)
-
 
 
 #BMI followup difference - match with emailAddress
 
 bmi_followup <- inner_join(rename(CSS_track,imputation=impnr),base_data,by=c("emailAdress","imputation"))
-bmi_followup <- subset(bmi_followup,imputation!=0)
 bmi_followup$difference <- bmi_followup$bmi.x-bmi_followup$bmi.y
 
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,1500))
 hist(simulate(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),xlim=c(-10,10)) #Too wide?
-summary(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
+summary(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0)))
 
 plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)))
 hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),breaks=200,xlim=c(-10,10))
 
 #The differences are not skewed.
 
-#Rubin's rules for variance
+#Method 1: Using the mids object
+bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
+
+summay(lm.mids(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids))
+
+
+#Method 2: Rubin's rules for variance in raw computations
 
 bmi_followup_ests <- matrix(nrow=length(coef(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))),ncol=20)
 bmi_followup_sds <- matrix(nrow=length(coef(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))),ncol=20)
@@ -176,20 +194,32 @@ bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.x>=25)!=(bmi_followup$b
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.x>=25)>(bmi_followup$bmi.y>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.x>=25)<(bmi_followup$bmi.y>=25))
 
-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
+summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
+summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
+summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
 
 bmi_followup$bmi30change <- as.numeric((bmi_followup$bmi.x>=30)!=(bmi_followup$bmi.y>=30))
 bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.x>=30)>(bmi_followup$bmi.y>=30))
 bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.x>=30)<(bmi_followup$bmi.y>=30))
 
-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))
+summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
+summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
+summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))
 
 
-#Rubin's rule for variances - taking into account the imputations
+#Method 1: Using the mids object
+
+summary(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+summary(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+
+summary(glm.mids(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+summary(glm.mids(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+
+summary(glm.mids(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+summary(glm.mids(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=base_data_mids,family=binomial))
+
+
+##Method 2: Rubin's rule for variances - taking into account the imputations - raw computations
 
 sd25<-sd25up<-sd25down<-sd30<-sd30up<-sd30down<-
   matrix(nrow=length(summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))$coefficients[,2]),ncol=20)
@@ -198,21 +228,21 @@ est25<-est25up<-est25down<-est30<-est30up<-est30down<-
   matrix(nrow=length(summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))$coefficients[,1]),ncol=20)
 
 for (i in 1:20){
-  sd25[,i]<-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
-  sd25up[,i]<-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
-  sd25down[,i]<-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
+  sd25[,i]<-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
+  sd25up[,i]<-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
+  sd25down[,i]<-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
   
-  sd30[,i]<-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
-  sd30up[,i]<-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
-  sd30down[,i]<-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,2]
+  sd30[,i]<-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
+  sd30up[,i]<-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
+  sd30down[,i]<-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,2]
   
-  est25[,i]<-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
-  est25up[,i]<-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
-  est25down[,i]<-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
+  est25[,i]<-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
+  est25up[,i]<-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
+  est25down[,i]<-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
   
-  est30[,i]<-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
-  est30up[,i]<-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
-  est30down[,i]<-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i)))$coefficients[,1]
+  est30[,i]<-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
+  est30up[,i]<-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
+  est30down[,i]<-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation==i),family=binomial))$coefficients[,1]
 }
 
 sd25Value<-sqrt(rowMeans(sd25^2)+rowSums((est25-rowMeans(est25))^2)/19) # sqrt(mean estimator variance + estimated imputation estimator variance): SE=sqrt(V_total).
@@ -225,18 +255,18 @@ sd30downValue<-sqrt(rowMeans(sd30down^2)+rowSums((est30down-rowMeans(est30down))
 
 
 #Summary tables
-change25_indicator_table <- data.frame("ests"<-coef(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),
+change25_indicator_table <- data.frame("ests"<-coef(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial)),
                                       "sds"<- sd25Value)
-change25up_indicator_table <- data.frame("ests"<-coef(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),
+change25up_indicator_table <- data.frame("ests"<-coef(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial)),
                                        "sds"<- sd25upValue)
-change25down_indicator_table <- data.frame("ests"<-coef(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),
+change25down_indicator_table <- data.frame("ests"<-coef(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial)),
                                        "sds"<- sd25downValue)
 
-change30_indicator_table <- data.frame("ests"<-coef(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),
+change30_indicator_table <- data.frame("ests"<-coef(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial)),
                                        "sds"<- sd30Value)
-change30up_indicator_table <- data.frame("ests"<-coef(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),
+change30up_indicator_table <- data.frame("ests"<-coef(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial)),
                                          "sds"<- sd30upValue)
-change30down_indicator_table <- data.frame("ests"<-c(coef(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup))),
+change30down_indicator_table <- data.frame("ests"<-c(coef(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup,family=binomial))),
                                            "sds"<- sd30downValue)
 
 
@@ -245,7 +275,7 @@ change30down_indicator_table <- data.frame("ests"<-c(coef(glm(bmi30changeDown ~ 
 #Tracking data for the followup CSS sample
 
 #Population sample
-pop_weights <- read.csv2("S:/SUND-IFSV-SmartSleep/Thea/Clusters, obesity and metabolic biomarkers/Data/ Population Sample/PopulationWeighted.csv")
+pop_weights <- read.csv2("S:/SUND-IFSV-SmartSleep/Thea/Clusters, obesity and metabolic biomarkers/Data/Population Sample/PopulationWeighted.csv")
 
 
 #Followup sample
@@ -265,17 +295,17 @@ CSS_track$sample_weights<-as.numeric(left_join(CSS_track,rename(CSS_weights,user
 CSS_track$bmi[CSS_track$bmi==0]<-NA
 
 #Models
-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial))
-hist(residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)))
-plot(fitted(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)))
+summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial))
+hist(residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)))
+plot(fitted(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)))
 
-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial))
-hist(residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)))
-plot(fitted(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0),family=binomial)))
+summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial))
+hist(residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)))
+plot(fitted(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0),family=binomial)))
 
-summary(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0)))
-hist(residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0))),breaks=40)
-plot(fitted(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0))),residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weightss,data=subset(CSS_track,impnr!=0))))
+summary(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0)))
+hist(residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0))),breaks=40)
+plot(fitted(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0))),residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0))))
 
 #box_cox_transformation
 bc <- boxcox(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr!=0))
@@ -287,7 +317,17 @@ hist(simulate(new_model),breaks=10)
 
 summary(new_model)
 
-#Adjusting for multiple imputations in the three kinds of models using Rubin's rules
+
+#Method 1: Mice-based inference for three models:
+
+CSS_track_mids<-as.mids(CSS_track,.imp="impnr",.id="userid")
+
+summary(lm.mids(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids))
+summary(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids,family=binomial))
+summary(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids,family=binomial))
+
+
+#Method 2: Adjusting for multiple imputations in the three kinds of models using Rubin's rules (raw calculations)
 
 sd25<-sd30<-sdnum<-
   matrix(nrow=length(summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track))$coefficients[,2]),ncol=20)
@@ -297,13 +337,13 @@ est25<-est30<-estnum<-
 
 
 for (i in 1:20){
-  sd25[,i]<-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,2]
-  sd30[,i]<-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,2]
-  sdnum[,i]<-summary(glm(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,2]
+  sd25[,i]<-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)),family=binomial)$coefficients[,2]
+  sd30[,i]<-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)),family=binomial)$coefficients[,2]
+  sdnum[,i]<-summary(lm(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,2]
   
-  est25[,i]<-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,1]
-  est30[,i]<-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,1]
-  estnum[,i]<-summary(glm(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,1]
+  est25[,i]<-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)),family=binomial)$coefficients[,1]
+  est30[,i]<-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)),family=binomial)$coefficients[,1]
+  estnum[,i]<-summary(lm(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(CSS_track,impnr==i)))$coefficients[,1]
 }
 
 sd25Value<-sqrt(rowMeans(sd25^2)+rowSums((est25-rowMeans(est25))^2)/19) # sqrt(mean estimator variance + estimated impnr estimator variance): SE=sqrt(V_total).
