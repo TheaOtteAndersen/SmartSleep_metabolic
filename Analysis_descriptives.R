@@ -81,3 +81,34 @@ publish(univariateTable(selfScoreCat ~ education,data=base_data, column.percent=
 
 publish(univariateTable(selfScoreCat ~ occupation,data=base_data, column.percent=TRUE))
 
+# --------------------------------------------------------------------------- ##
+
+## Population Sample
+setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample")
+popu <- read.table("imp_population_w0.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
+
+table(popu$impnr, useNA = "always")
+popu <- subset(popu,impnr!=0)
+
+popu$userid <- popu$RespondKey
+table(popu$userid)
+
+setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data")
+tracking <- read.table("subject_tracking_clusters.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
+tracking_popu <- subset(tracking, random==1)
+table(tracking$random)
+
+popuAlt <- merge(tracking_popu, popu, by="userid")
+
+# --------------------------------------------------------------------------- ##
+  
+#Reading in the data
+setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
+CSS <- read.csv2("Citizen Science Sample/imp_citizenScience.csv")
+CSS <- subset(CSS,impnr!=0)
+CSS$userid <- CSS$RespondKey
+
+tracking_CSS <- subset(tracking, followup==1)
+table(tracking$followup)
+  
+CSSAlt <- merge(tracking_CSS, CSS, by="userid")
