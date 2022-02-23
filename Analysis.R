@@ -30,11 +30,13 @@ subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tr
 #base_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv"),imputation=imp_nr)
 #base_data$zipCode<-as.numeric(base_data$zipCode)
 
+## load baseline data
 base_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv"),imputation=imp_nr)
 
+## load population sample
 pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv"),imputation=imp_nr)
 
-
+# --------------------------------------------------------------------------- ##
 #Baseline data with self-reports
 
 ## if no mobile phone = NA
@@ -63,6 +65,7 @@ base_data$bmi[base_data$bmi<14]<-NA
 base_data$bmi[base_data$bmi>147]<-NA
 base_data$bmi[base_data$bmi==0]<-NA
 
+# --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 
@@ -88,30 +91,36 @@ CSS$bmi[CSS$height==CSS$weight]<-NA
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
 
+# --------------------------------------------------------------------------- ##
 #Population sample
 
+## bmi
 pop_data$bmi[pop_data$bmi==0] <- NA
 pop_data$bmi[pop_data$height<100 & pop_data$imputation!=0] <- (pop_data$weight/(((pop_data$height+100)/100)^2))[pop_data$height<100  & pop_data$imputation!=0]
 pop_data$height[pop_data$height<100 & pop_data$imputation!=0] <- pop_data$height[pop_data$height<100 & pop_data$imputation!=0]+100 
 pop_data$bmi[pop_data$height==pop_data$weight]<-NA
 pop_data$bmi[pop_data$bmi<14]<-NA
 
+## risk profiles for population sample
 pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
   (pop_data$mobileUseNight=="Every night or almost every night")*4+(pop_data$mobileUseNight=="A few times a week")*3+(pop_data$mobileUseNight=="A few times a month or less")*2+(pop_data$mobileUseNight=="Never")*1+
   (pop_data$mobileCheck==">20 times an hour")*4+(pop_data$mobileCheck=="11-20 times an hour")*4+(pop_data$mobileCheck=="5-10 times an hour")*3+(pop_data$mobileCheck=="1-4 times an hour")*2+(pop_data$mobileCheck=="Every 2nd hour")*2+(pop_data$mobileCheck=="Several times a day")*1+(pop_data$mobileCheck=="Once a day or less")*1+
   (pop_data$pmpuScale<=14)*1+(pop_data$pmpuScale>14 & pop_data$pmpuScale<17)*2+(pop_data$pmpuScale>=17 & pop_data$pmpuScale<19)*3+(pop_data$pmpuScale>=19)*4
-summary(pop_data$selfScore[pop_data$impnr!=0])
+summary(pop_data$selfScore[pop_data$imputation!=0])
 pop_data$selfScoreCat <- NA
 pop_data$selfScoreCat[!is.na(pop_data$selfScore)]<-"1"
 pop_data$selfScoreCat[pop_data$selfScore>=8]="2"
 pop_data$selfScoreCat[pop_data$selfScore>=10]="3"
 pop_data$selfScoreCat[pop_data$selfScore>=12]="4"
 
+## merge tracking and survey data for population sample
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 #Looking at general patterns
 
-#Cakculated bmi from imputed height and weight vs directly imputed bmi - which one to use? At the moment we use the directly imputed bmi.
+#Calculated bmi from imputed height and weight vs directly imputed bmi - which one to use? At the moment we use the directly imputed bmi.
 
 hist(CSS$bmi,breaks=40)
 hist(log(CSS$bmi),breaks=40)
@@ -136,9 +145,10 @@ hist(base_data$height,breaks=40)
 hist(base_data$weight,breaks=40)
 
 
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 
 #Regression analyses
-
 
 #Base BMI models
 
@@ -162,8 +172,7 @@ hist(simulate(new_model)$sim_1,breaks=40,xlim=c(0.78,0.81))
 summary(new_model)
 
 
-
-#Using the mice package with mids objects
+## Using the mice package with mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
 mod30<-(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids,family=binomial))
 mod30_p<-(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+sample_weights,data=base_data_mids,family=binomial))
@@ -172,8 +181,8 @@ modnum<-(lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+oc
 
 summary(pool(mod30),conf.int = T)
 D1(mod30,mod30_p)
-summary(pool(mod25))
-summary(pool(modnum))
+summary(pool(mod25), conf.int = T)
+summary(pool(modnum), conf.int = T)
 
 
 #BMI followup difference - match with emailAddress or CS_ID
