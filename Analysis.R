@@ -21,6 +21,7 @@ library(mitml)
 #CSS <- read.csv2("Citizen Science Sample/imp_citizenScience.csv")
 #CSS <- rbind(CSS0,CSS)
 
+## load tracking data 
 subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
 
 #base_weights <- read.csv2("S:/SUND-IFSV-SmartSleep/Thea/Clusters, obesity and metabolic biomarkers/Data/Citizen Science Sample/SmartSleepExpWeighted.csv")
@@ -36,6 +37,10 @@ pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputati
 
 #Baseline data with self-reports
 
+## if no mobile phone = NA
+base_data$pmpuScale[base_data$mobilephone=="No mobile phone"] <- NA
+
+## risk profiles for baseline data 
 base_data$selfScore <- (base_data$mobileUseBeforeSleep=="5-7 times per week")*4+(base_data$mobileUseBeforeSleep=="2-4 times per week")*3+(base_data$mobileUseBeforeSleep=="Once a week")*3+(base_data$mobileUseBeforeSleep=="Every month or less")*2+(base_data$mobileUseBeforeSleep=="Never")*1+
   (base_data$mobileUseNight=="Every night or almost every night")*4+(base_data$mobileUseNight=="A few times a week")*3+(base_data$mobileUseNight=="A few times a month or less")*2+(base_data$mobileUseNight=="Never")*1+
   (base_data$mobileCheck==">20 times per hour")*4+(base_data$mobileCheck=="11-20 times per hour")*4+(base_data$mobileCheck=="5-10 times per hour")*3+(base_data$mobileCheck=="1-4 times per hour")*2+(base_data$mobileCheck=="Every 2nd hour")*2+(base_data$mobileCheck=="Several times per day")*1+(base_data$mobileCheck=="Once a day")*1+
@@ -46,8 +51,9 @@ base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
 base_data$selfScoreCat[base_data$selfScore>=8]="2"
 base_data$selfScoreCat[base_data$selfScore>=10]="3"
 base_data$selfScoreCat[base_data$selfScore>=12]="4"
-table(base_data$selfScoreCat,useNA="always")
+table(base_data$selfScoreCat,useNA="always") ## her er imputation=0 også med?
 
+## bmi for baseline data 
 base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
 base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
 base_data$height[base_data$CS_ID==586] <- 100
@@ -60,6 +66,7 @@ base_data$bmi[base_data$bmi==0]<-NA
 #Followup sample - using quartile levels from baseline sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 
+## risk profiles for CSS
 CSS$selfScore <- (CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileUseBeforeSleep=="2-4 times per week")*3+(CSS$mobileUseBeforeSleep=="Once a week")*3+(CSS$mobileUseBeforeSleep=="Every month or less")*2+(CSS$mobileUseBeforeSleep=="Never")*1+
   (CSS$mobileUseNight=="Every night or almost every night")*4+(CSS$mobileUseNight=="A few times a week")*3+(CSS$mobileUseNight=="A few times a month or less")*2+(CSS$mobileUseNight=="Never")*1+
   (CSS$mobileCheck==">20 times an hour")*4+(CSS$mobileCheck=="11-20 times an hour")*4+(CSS$mobileCheck=="5-10 times an hour")*3+(CSS$mobileCheck=="1-4 times an hour")*2+(CSS$mobileCheck=="Every 2nd hour")*2+(CSS$mobileCheck=="Several times a day")*1+(CSS$mobileCheck=="Once a day or less")*1+
@@ -70,14 +77,15 @@ CSS$selfScoreCat[!is.na(CSS$selfScore)]<-"1"
 CSS$selfScoreCat[CSS$selfScore>=8]="2"
 CSS$selfScoreCat[CSS$selfScore>=10]="3"
 CSS$selfScoreCat[CSS$selfScore>=12]="4"
+table(CSS$selfScoreCat[CSS$impnr!=0], useNA="always")
 
-
+## bmi CSS
 CSS$bmi[CSS$bmi==0] <- NA
 CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
 CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
 CSS$bmi[CSS$height==CSS$weight]<-NA
 
-
+## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
 
 #Population sample
