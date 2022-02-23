@@ -169,7 +169,7 @@ new_model <- lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occ
 hist(((base_data$bmi^lambda-1)/lambda),breaks=40,xlim=c(0.78,0.81))
 hist(simulate(new_model)$sim_1,breaks=40,xlim=c(0.78,0.81))
 
-summary(new_model)
+summary(new_model, conf.int = T)
 
 
 ## Using the mice package with mids objects
