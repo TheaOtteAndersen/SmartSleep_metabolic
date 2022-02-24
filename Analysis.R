@@ -157,12 +157,13 @@ hist(base_data$weight,breaks=40)
 
 #Regression analyses
 
-#Base BMI models
+#Base BMI models (test til om modellen kører)
 
 summary(glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0),family=binomial))
 summary(glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0),family=binomial))
 summary(lm(log(log(bmi))~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))
 
+## test kontinuert bmi
 plot(fitted(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))))
 hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))),xlim=c(-20,20),breaks=200)
 hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
@@ -200,7 +201,9 @@ summary(pool(modnum), conf.int = T)
 
 bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
 
+## difference mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
+mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
 
 bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
 bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
@@ -212,6 +215,7 @@ summary(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*s
 plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)))
 hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup)),breaks=200,xlim=c(-10,10))
 
+## ændringer i bmi ja eller nej
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
@@ -222,8 +226,7 @@ bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_follow
 
 #The differences are not skewed, but their distribution is more narrow than a normal distribution - is this critical?
 
-
-#MUsing the mids object for simple lm.
+#MUsing the mids object for simple lm. (for differencen)
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
 summary(pool(lm.mids(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids)))
@@ -233,7 +236,11 @@ plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.
 hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0))),breaks=50)
 
 #Alternative (better?) formulation
+
+##ændringer i bmi over tid (men residual plottet siger at modellen er centreret omkring middelværdien)
 summary(pool(lm.mids(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids)))
+
+## residual plot
 plot(fitted(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0))),
      residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0))))
 hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0))),breaks=50)
@@ -322,8 +329,6 @@ CSS_track_mids<-as.mids(CSS_track,.imp="impnr",.id="userid")
 summary(pool(lm.mids(((bmi^lambda2-1)/lambda2) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids)))
 summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids,family=binomial)))
 summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=CSS_track_mids,family=binomial)))
-
-
 
 #Tracking data: Population sample (random sample) - same analysis
 
