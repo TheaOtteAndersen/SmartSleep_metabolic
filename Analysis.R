@@ -165,7 +165,7 @@ hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weig
 hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
 hist(simulate(lm(log(bmi)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited here either
 
-#box_cox_transformation - bmi values are heavily right-skewed so we transform them closer toward normality
+#box_cox_transformation - bmi values are heavily right-skewed so we transform them closer toward normality ## hvordan kan jeg få mening af dette?
 bc <- boxcox(bmi ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))
 (lambda <- bc$x[which.max(bc$y)])
 new_model <- lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))
