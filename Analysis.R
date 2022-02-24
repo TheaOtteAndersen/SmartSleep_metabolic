@@ -36,7 +36,7 @@ base_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputa
 pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv"),imputation=imp_nr)
 
 clin_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv"),imputation=impnr)
-
+clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
 
 # --------------------------------------------------------------------------- ##
 
@@ -283,6 +283,16 @@ summary(pool(glm.mids((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+ed
 summary(pool(glm.mids((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
 
 
+#New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
+
+long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
+                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
+
+long_data_mids <- as.mids(long_data,.imp="imputation")
+
+summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time*sample_weights,data=long_data_mids)))
+summary(pool(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time*sample_weights,family=binomial,data=long_data_mids)))
+summary(pool(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time*sample_weights,family=binomial,data=long_data_mids)))
 
 
 
@@ -351,8 +361,11 @@ summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfSc
 ## no adjustment for selfScoreCat
 summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
 
+
+
 #Analysis of the clinical sample data - interest in biomarkers
 
+clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
 clinical_sample <- inner_join(clin_data,subject_tracking_clusters,by="userid")
 
 clinical_sample$bmi[clinical_sample$bmi==0] <- NA
@@ -379,6 +392,8 @@ clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
 clinical_sample$bmi <- as.numeric(clinical_sample$bmi)
 clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi>=25)
 clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi>=30)
+
+#hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
 
 #Transforming to mids for modelling and inference
 
