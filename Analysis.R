@@ -53,7 +53,7 @@ base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
 base_data$selfScoreCat[base_data$selfScore>=8]="2"
 base_data$selfScoreCat[base_data$selfScore>=10]="3"
 base_data$selfScoreCat[base_data$selfScore>=12]="4"
-table(base_data$selfScoreCat,useNA="always") ## her er imputation=0 også med?
+table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always") 
 
 ## bmi for baseline data 
 base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
@@ -64,6 +64,7 @@ base_data$bmi[base_data$height==base_data$weight]<-NA
 base_data$bmi[base_data$bmi<14]<-NA
 base_data$bmi[base_data$bmi>147]<-NA
 base_data$bmi[base_data$bmi==0]<-NA
+summary(base_data$bmi[base_data$imputation!=0])
 
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
@@ -87,6 +88,7 @@ CSS$bmi[CSS$bmi==0] <- NA
 CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
 CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
 CSS$bmi[CSS$height==CSS$weight]<-NA
+summary(CSS$bmi[CSS$impnr!=0])
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
@@ -100,6 +102,7 @@ pop_data$bmi[pop_data$height<100 & pop_data$imputation!=0] <- (pop_data$weight/(
 pop_data$height[pop_data$height<100 & pop_data$imputation!=0] <- pop_data$height[pop_data$height<100 & pop_data$imputation!=0]+100 
 pop_data$bmi[pop_data$height==pop_data$weight]<-NA
 pop_data$bmi[pop_data$bmi<14]<-NA
+summary(pop_data$bmi[pop_data$imputation!=0])
 
 ## risk profiles for population sample
 pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
@@ -112,6 +115,7 @@ pop_data$selfScoreCat[!is.na(pop_data$selfScore)]<-"1"
 pop_data$selfScoreCat[pop_data$selfScore>=8]="2"
 pop_data$selfScoreCat[pop_data$selfScore>=10]="3"
 pop_data$selfScoreCat[pop_data$selfScore>=12]="4"
+table(pop_data$selfScoreCat[pop_data$imputation!=0])
 
 ## merge tracking and survey data for population sample
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
@@ -245,14 +249,14 @@ summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+
 
 #Using the mids object
 
-summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
-summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
+summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
 
-summary(pool(glm.mids(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
-summary(pool(glm.mids(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
+summary(pool(glm.mids(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(glm.mids(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
 
-summary(pool(glm.mids(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
-summary(pool(glm.mids(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
+summary(pool(glm.mids(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(glm.mids(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)), conf.int = T)
 
 #Alternative (better?) formulation with more easily interpretable parameters
 summary(pool(glm.mids((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
@@ -263,6 +267,8 @@ summary(pool(glm.mids((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+ed
 
 
 #####Tracking data for the followup CSS sample
+
+## Hvad er de forskellige clusters? cluster 1 = night-time user?, cluster 2 =morning user?, cluster = non-user?, cluster 4 = evening user?
 CSS_track$bmi[CSS_track$bmi==0]<-NA
 
 #Models
@@ -318,8 +324,15 @@ plot(fitted(new_model),residuals(new_model))
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
-
+## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
+## bmi kontinuert 
 summary(pool(lm.mids(((bmi^lambda3-1)/lambda3) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids)),conf.int=T)
-summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
-summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
 
+## BMI >=25
+summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
+## no adjustment for selfScoreCat
+summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
+
+## BMI >30
+summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
+## no adjustment for selfScoreCat

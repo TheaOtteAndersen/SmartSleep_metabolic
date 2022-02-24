@@ -59,7 +59,6 @@ table(base_data$imp_nr)
 sqrt( mean(aggregate(subset(base_data,imp_nr!=0)$age,by=list(subset(base_data,imp_nr!=0)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0)$age,by=list(subset(base_data,imp_nr!=0)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0)$age))^2)/19
 )
 
-
 ## gender
 table(base_data$gender, useNA="always")/20
 prop.table(table(base_data$gender)/20)
@@ -79,6 +78,25 @@ prop.table(table(base_data$selfScoreCat)/20)
 
 ## age ## how to calculate SD for each category??
 publish(univariateTable(selfScoreCat ~ age,data=base_data, column.percent=TRUE))
+
+## SD for risk profiles 1
+sqrt( 
+  mean(aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==1)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==1)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0 & selfScoreCat==1)$age))^2)/19
+)
+
+## SD for risk profile 2
+sqrt( 
+  mean(aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==2)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==2)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0 & selfScoreCat==2)$age))^2)/19
+)
+
+## SD for risk profile 3
+sqrt( 
+  mean(aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==3)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==3)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0 & selfScoreCat==3)$age))^2)/19
+)
+## SD for risk profile 4
+sqrt( 
+  mean(aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==4)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imp_nr!=0 & selfScoreCat==4)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0 & selfScoreCat==4)$age))^2)/19
+)
 
 ## gender
 publish(univariateTable(selfScoreCat ~ gender,data=base_data, column.percent=TRUE))
