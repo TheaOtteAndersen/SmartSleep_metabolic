@@ -15,6 +15,17 @@ library(stringr)
 library(numbers)
 library(gamlss)
 
+
+estimate.pooler <- function(coef,sd){
+  n_row <- nrow(coef)
+  n_col <- ncol(coef)
+  
+  coefs <- rowMeans(coef)
+  sds <- sqrt(rowMeans(sd^2)+sum((coef-coefs)^2)/n_col)
+  df <- data.frame("estimate"=coefs,"sd"=sds,"lower.CI"=coefs-1.96*sds,"upper.CI"=coefs+1.96*sds)
+  return(df)
+}
+
 #Reading in the data
 #setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
 #load("H:/SmartSleep backup IT issues/imputation/myImputationCSS-res-00001.RData")
@@ -160,6 +171,12 @@ hist(base_data$weight,breaks=40)
 
 #Regression analyses
 
+
+
+
+
+#### BASE POPULATION
+
 #Base BMI models (test til om modellen kører)
 
 summary(glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0),family=binomial))
@@ -170,45 +187,37 @@ summary(lm(log(log(bmi))~(selfScoreCat+age+gender+education+occupation), weights
 plot(fitted(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))))
 hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))),xlim=c(-20,20),breaks=200)
 hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
-hist(simulate(lm(log(bmi)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited here either
 
-#box_cox_transformation - bmi values are heavily right-skewed so we transform them closer toward normality ## hvordan kan jeg få mening af dette?
-bc <- boxcox(bmi ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))
-(lambda <- bc$x[which.max(bc$y)])
-new_model <- lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))
-
-
-hist(((base_data$bmi^lambda-1)/lambda),breaks=40,xlim=c(0.78,0.81))
-hist(simulate(new_model)$sim_1,breaks=40,xlim=c(0.78,0.81))
-
-summary(new_model, conf.int = T)
 
 #Better alternative: Pretty good fit. A generalized family of models.
 
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
-m_sum <- summary(m)
+#m_sum <- summary(m)
 plot(m)
 coef(m)
+diag(vcov(m))
 confint(m)
 
-m_simple <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), weights=sample_weights,family = BCCG)
-plot(m_simple)
+#m_simple <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), weights=sample_weights,family = BCCG)
+#plot(m_simple)
 
 #Works with mids?
 
-m_list <- list()
-m_sum_list <- list()
+m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)), family = BCCG)
-  m_sum <- summary(m)
+  m_coefs[,i] <- coef(m)
+  m_sds[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
   
-  m_list[[i]] <- m
-  m_sum_list[[i]] <- m_sum
+  #m_list[[i]] <- m
+  #m_sum_list[[i]] <- m_sum
 }
 
 #Now we may simply combine results using Rubin's rules.
 
+RRresult <- estimate.pooler(m_coefs,m_sds)
+rownames(RRresult) <- names(coef(gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), family = BCCG)))
 
 
 ## Using the mice package with mids objects
@@ -230,6 +239,9 @@ summary(pool(modnum))
 D1(mod30,mod30_p)
 summary(pool(mod25), conf.int = T)
 summary(pool(modnum), conf.int = T)
+
+
+
 
 
 
@@ -327,6 +339,32 @@ summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, we
 summary(pool(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
 summary(pool(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
 
+#Now with the gamlss for numeric bmi
+
+m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
+            nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG)
+
+m_coefs_long <- m_sds_long <- matrix(nrow=length(coef(m)),ncol=20)
+
+for (i in 1:20){
+  m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
+              nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==i)), family = BCCG)
+  m_coefs_long[,i] <- coef(m)
+  m_sds_long[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
+  
+  #m_list[[i]] <- m
+  #m_sum_list[[i]] <- m_sum
+}
+
+#Now we may simply combine results using Rubin's rules.
+
+RRresult_long <- estimate.pooler(m_coefs_long,m_sds_long)
+rownames(RRresult_long) <- names(coef(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
+                                        nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)), family = BCCG)))
+
+
+
+
 
 
 #####Tracking data for the followup CSS sample
@@ -347,14 +385,6 @@ summary(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender
 hist(residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))),breaks=40)
 plot(fitted(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))),residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))))
 
-#box_cox_transformation
-bc <- boxcox(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))
-(lambda2 <- bc$x[which.max(bc$y)])
-#new_model <- lm(((bmi^lambda-1)/lambda) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))
-
-hist(((CSS_track$bmi^lambda2-1)/lambda2))
-hist(simulate(new_model)$sim_1,breaks=20,xlim=c(0.830,0.860))
-plot(fitted(new_model),residuals(new_model))
 
 
 summary(new_model)
@@ -364,30 +394,75 @@ summary(new_model)
 
 CSS_track_mids<-as.mids(CSS_track,.imp="impnr",.id="userid")
 
-summary(pool(lm.mids(((bmi^lambda2-1)/lambda2) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=CSS_track_mids)))
 summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=CSS_track_mids,family=binomial)))
 summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=CSS_track_mids,family=binomial)))
+
+
+m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)),family=BCCG)
+
+m_coefs_CSS <- m_sds_CSS <- matrix(nrow=length(coef(m)),ncol=20)
+
+for (i in 1:20){
+  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==i)), family = BCCG)
+  m_coefs_CSS[,i] <- coef(m)
+  m_sds_CSS[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
+  
+  #m_list[[i]] <- m
+  #m_sum_list[[i]] <- m_sum
+}
+
+#Now we may simply combine results using Rubin's rules.
+
+RRresult_CSStrack <- estimate.pooler(m_coefs_CSS,m_sds_CSS)
+rownames(RRresult_CSStrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)), family = BCCG)))
+
+
+
+
+
+
+
+
 
 #Tracking data: Population sample (random sample) - same analysis
 
 hist(pop_track$bmi,breaks=50,xlim=c(0,50))
 
+
 #analyses
-
-bc <- boxcox(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(pop_track,imputation!=0))
-(lambda3 <- bc$x[which.max(bc$y)])
-new_model <- lm(((bmi^lambda3-1)/lambda3) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(pop_track,imputation!=0))
-
-hist(((pop_track$bmi^lambda3-1)/lambda3))
-hist(simulate(new_model)$sim_1,breaks=20)
-plot(fitted(new_model),residuals(new_model))
 
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
 ## bmi kontinuert 
-summary(pool(lm.mids(((bmi^lambda3-1)/lambda3) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids)),conf.int=T)
+
+
+m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)),family=BCCG)
+
+m_coefs_pop <- m_sds_pop <- matrix(nrow=length(coef(m)),ncol=20)
+
+for (i in 1:20){
+  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==i)), family = BCCG)
+  m_coefs_pop[,i] <- coef(m)
+  m_sds_pop[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
+  
+  #m_list[[i]] <- m
+  #m_sum_list[[i]] <- m_sum
+}
+
+#Now we may simply combine results using Rubin's rules.
+
+RRresult_poptrack <- estimate.pooler(m_coefs_pop,m_sds_pop)
+rownames(RRresult_poptrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
+                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)), family = BCCG)))
+
+
 
 ## BMI >=25
 summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids,family=binomial)),conf.int=T)
@@ -398,6 +473,12 @@ summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+ge
 ## BMI >30
 summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids,family=binomial)),conf.int=T)
 ## no adjustment for selfScoreCat
+
+
+
+
+
+
 
 
 
