@@ -211,7 +211,12 @@ mod30_p<-(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+samp
 mod25<-(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids,family=binomial))
 modnum<-(lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=base_data_mids))
 
-summary(pool(mod30),conf.int = T)
+
+model30 <- summary(pool(mod30),conf.int = T)
+exp(model30$estimate)
+exp(model30$`2.5 %`)
+exp(model30$`97.5 %`)
+
 D1(mod30,mod30_p) #Test function
 summary(pool(mod25))
 summary(pool(modnum))
@@ -263,7 +268,7 @@ hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupati
 #Alternative (better?) formulation
 
 ##ændringer i bmi over tid (men residual plottet siger at modellen er centreret omkring middelværdien)
-summary(pool(lm.mids(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids)))
+summary(pool(lm.mids(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids)), conf.int = T)
 
 ## residual plot
 plot(fitted(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=subset(bmi_followup,imputation!=0))),
