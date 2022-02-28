@@ -11,6 +11,9 @@ library(MASS)
 library(miceadds)
 library(mitml)
 library(dataReporter)
+library(stringr)
+library(numbers)
+library(gamlss)
 
 #Reading in the data
 #setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
@@ -169,16 +172,37 @@ hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weig
 hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
 hist(simulate(lm(log(bmi)~(selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited here either
 
-#box_cox_transformation - bmi values are heavily right-skewed so we transform them closer toward normality ## hvordan kan jeg f? mening af dette?
+#box_cox_transformation - bmi values are heavily right-skewed so we transform them closer toward normality ## hvordan kan jeg få mening af dette?
 bc <- boxcox(bmi ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))
 (lambda <- bc$x[which.max(bc$y)])
 new_model <- lm(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=subset(base_data,imputation!=0))
+
 
 hist(((base_data$bmi^lambda-1)/lambda),breaks=40,xlim=c(0.78,0.81))
 hist(simulate(new_model)$sim_1,breaks=40,xlim=c(0.78,0.81))
 
 summary(new_model, conf.int = T)
 
+#Better alternative: Pretty good fit.
+
+m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation)*sample_weights, sigma.formula = ~(selfScoreCat+age+gender+education+occupation)*sample_weights, nu.formula =~ (selfScoreCat+age+gender+education+occupation)*sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), family = BCCG)
+m_sum <- summary(m)
+plot(m)
+coef(m)
+confint(m)
+
+#Works with mids?
+
+m_list <- list()
+m_sum_list <- list()
+
+for (i in 1:20){
+  m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation)*sample_weights, sigma.formula = ~(selfScoreCat+age+gender+education+occupation)*sample_weights, nu.formula =~ (selfScoreCat+age+gender+education+occupation)*sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)), family = BCCG)
+  m_sum <- summary(m)
+  
+  m_list[[i]] <- m
+  m_sum_list[[i]] <- m_sum
+}
 
 ## Using the mice package with mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
@@ -194,6 +218,7 @@ summary(pool(modnum))
 D1(mod30,mod30_p)
 summary(pool(mod25), conf.int = T)
 summary(pool(modnum), conf.int = T)
+
 
 
 #BMI followup difference - match with emailAddress or CS_ID
@@ -278,6 +303,7 @@ summary(pool(glm.mids((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+ed
 summary(pool(glm.mids((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*sample_weights.y-sample_weights.y,data=bmi_followup_mids,family=binomial)))
 
 
+
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
 long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
@@ -357,17 +383,22 @@ summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfSc
 summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
 
 
+## BMI >30
+summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
+## no adjustment for selfScoreCat
+
+
 
 #Analysis of the clinical sample data - interest in biomarkers
 
 clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
-clinical_sample <- inner_join(clin_data,subject_tracking_clusters,by="userid")
+clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
 
-clinical_sample$bmi[clinical_sample$bmi==0] <- NA
-clinical_sample$bmi[clinical_sample$height<100 & clinical_sample$imputation!=0] <- (clinical_sample$weight/(((clinical_sample$height+100)/100)^2))[clinical_sample$height<100  & clinical_sample$imputation!=0]
+clinical_sample$bmi.clinical[clinical_sample$bmi.clinical==0] <- NA
+clinical_sample$bmi.clinical[clinical_sample$height<100 & clinical_sample$imputation!=0] <- (clinical_sample$weight/(((clinical_sample$height+100)/100)^2))[clinical_sample$height<100  & clinical_sample$imputation!=0]
 clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0] <- clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0]+100 
-clinical_sample$bmi[clinical_sample$height==clinical_sample$weight]<-NA
-clinical_sample$bmi[clinical_sample$bmi<14]<-NA
+clinical_sample$bmi.clinical[clinical_sample$height==clinical_sample$weight]<-NA
+clinical_sample$bmi.clinical[clinical_sample$bmi.clinical<14]<-NA
 
 clinical_sample$selfScore <- (clinical_sample$mobileUseBeforeSleep=="5-7 times per week")*4+(clinical_sample$mobileUseBeforeSleep=="2-4 times per week")*3+(clinical_sample$mobileUseBeforeSleep=="Once a week")*3+(clinical_sample$mobileUseBeforeSleep=="Every month or less")*2+(clinical_sample$mobileUseBeforeSleep=="Never")*1+
   (clinical_sample$mobileUseNight=="Every night or almost every night")*4+(clinical_sample$mobileUseNight=="A few times a week")*3+(clinical_sample$mobileUseNight=="A few times a month or less")*2+(clinical_sample$mobileUseNight=="Never")*1+
@@ -384,9 +415,15 @@ clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
 
 #Introducing interesting derived variables
 
-clinical_sample$bmi <- as.numeric(clinical_sample$bmi)
-clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi>=25)
-clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi>=30)
+clinical_sample$bmi <- as.numeric(clinical_sample$bmi.clinical)
+clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi.clinical>=25)
+clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
+
+clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(clinical_sample$age.y,2+(mod(nchar(clinical_sample$age.y),4)==1),2+(mod(nchar(clinical_sample$age.y),4)==1)),".",
+                 substr(clinical_sample$age.y,3+(mod(nchar(clinical_sample$age.y),4)!=3),3+(mod(nchar(clinical_sample$age.y),4)!=3))))
+
+clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
+clinical_sample$dpb<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
 
@@ -394,7 +431,30 @@ clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi>=30)
 
 clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 
-## BMI >30
-summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation)*sample_weights-sample_weights,data=pop_track_mids,family=binomial)),conf.int=T)
-## no adjustment for selfScoreCat
+#Looks into data
+
+hist(as.numeric(clinical_sample$hdl),breaks=20)
+hist(as.numeric(clinical_sample$ldl),breaks=20)
+hist(as.numeric(clinical_sample$vldl),breaks=20)
+hist(as.numeric(clinical_sample$triglycerids),breaks=40)
+hist(as.numeric(clinical_sample$hba1c),breaks=40)
+hist(as.numeric(clinical_sample$glucose),breaks=40)
+hist(as.numeric(clinical_sample$waist),breaks=20)
+hist(as.numeric(clinical_sample$hip),breaks=20)
+hist(as.numeric(clinical_sample$ratiowaisthip),breaks=20)
+hist(rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T),breaks=20)
+hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T),breaks=20)
+
+
+#Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
+
+summary(pool(lm.mids(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(lm.mids(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(glm.mids(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids,family=Gamma)))
+summary(pool(glm.mids(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids,family=Gamma)))
+summary(pool(lm.mids(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(lm.mids(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(lm.mids(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(lm.mids(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
+summary(pool(lm.mids(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,data=clinical_mids)))
 
