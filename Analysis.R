@@ -109,6 +109,8 @@ summary(CSS$bmi[CSS$impnr!=0])
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
+CSS_track <- rename(CSS_track,imputation=impnr)
+CSS_track$sample_weights <- as.numeric(CSS_track$sample_weights)
 
 # --------------------------------------------------------------------------- ##
 #Population sample
@@ -218,6 +220,9 @@ for (i in 1:20){
 
 RRresult <- estimate.pooler(m_coefs,m_sds)
 rownames(RRresult) <- names(coef(gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), family = BCCG)))
+RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
+
+
 
 
 ## Using the mice package with mids objects
@@ -298,12 +303,14 @@ hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occ
 #Differences for indicators also (3 models per threshold: change, change from low to high group, and change from high to low group)
 
 summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-
 summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+
+summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
 summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+
+summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
 summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+
 
 #Using the mids object
 summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
@@ -312,10 +319,14 @@ summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+o
 summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
 summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
 
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<25),.imp="imputation")
 summary(pool(glm.mids(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<30),.imp="imputation")
 summary(pool(glm.mids(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
 
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=25),.imp="imputation")
 summary(pool(glm.mids(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=30),.imp="imputation")
 summary(pool(glm.mids(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
 
 #Alternative (better?) formulation with more easily interpretable parameters
@@ -326,29 +337,27 @@ summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+
 summary(pool(glm.mids((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
 summary(pool(glm.mids((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
 
-
-
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
 long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
-                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
+                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
 
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
-summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=long_data_mids)))
+#summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=long_data_mids)))
 summary(pool(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
 summary(pool(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
 
 #Now with the gamlss for numeric bmi
 
 m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
-            nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG)
+            nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG,method=RS(100))
 
 m_coefs_long <- m_sds_long <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
-              nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==i)), family = BCCG)
+              nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==i)), family = BCCG,method=RS(100))
   m_coefs_long[,i] <- coef(m)
   m_sds_long[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
   
@@ -362,6 +371,7 @@ RRresult_long <- estimate.pooler(m_coefs_long,m_sds_long)
 rownames(RRresult_long) <- names(coef(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
                                         nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)), family = BCCG)))
 
+RRresult_long$p.value <- pnorm(q=0,mean=RRresult_long$estimate,sd=RRresult_long$sd)
 
 
 
@@ -399,13 +409,13 @@ summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfSc
 
 
 m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)),family=BCCG)
+            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
 m_coefs_CSS <- m_sds_CSS <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==i)), family = BCCG)
+              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)), family = BCCG,method=RS(100))
   m_coefs_CSS[,i] <- coef(m)
   m_sds_CSS[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
   
@@ -417,8 +427,8 @@ for (i in 1:20){
 
 RRresult_CSStrack <- estimate.pooler(m_coefs_CSS,m_sds_CSS)
 rownames(RRresult_CSStrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)), family = BCCG)))
-
+                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)), family = BCCG)))
+RRresult_CSStrack$p.value <- pnorm(q=0,mean=RRresult_CSStrack$estimate,sd=RRresult_CSStrack$sd)
 
 
 
@@ -442,13 +452,13 @@ pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
 
 m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)),family=BCCG)
+            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
 m_coefs_pop <- m_sds_pop <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==i)), family = BCCG)
+              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)), family = BCCG,method=RS(100))
   m_coefs_pop[,i] <- coef(m)
   m_sds_pop[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
   
@@ -460,8 +470,8 @@ for (i in 1:20){
 
 RRresult_poptrack <- estimate.pooler(m_coefs_pop,m_sds_pop)
 rownames(RRresult_poptrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights")],imputation==10)), family = BCCG)))
-
+                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)), family = BCCG)))
+RRresult_poptrack$p.value <- pnorm(q=0,mean=RRresult_poptrack$estimate,sd=RRresult_poptrack$sd)
 
 
 ## BMI >=25
@@ -541,13 +551,77 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
 
-summary(pool(lm.mids(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(lm.mids(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(glm.mids(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids,family=Gamma)))
-summary(pool(glm.mids(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids,family=Gamma)))
-summary(pool(lm.mids(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(lm.mids(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(lm.mids(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(lm.mids(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
-summary(pool(lm.mids(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, weights=sample_weights, data=clinical_mids)))
+summary(pool(lm.mids(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))),sd=sd(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))))
+plot(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(lm.mids(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res=residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(glm.mids(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids,family=Gamma)))
+hist(residuals(glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),breaks=20,prob=T)
+res <- residuals(glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(glm.mids(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids,family=Gamma)))
+hist(residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),breaks=20,prob=T)
+res <- residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)))
+plot(fitted(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)))
+
+summary(pool(lm.mids(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(lm.mids(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(lm.mids(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(lm.mids(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+summary(pool(lm.mids(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+hist(residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+res_seq=seq(from=min(res),to=max(res),length.out=100)
+lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
+plot(residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+
+#Generally the residuals look reasonably centered, with a few positive outliers. The residual distributions on the first distribution actually look reasonably normal, save for the few (extreme) outliers.
+
+#Seems that these models are appropriate, and that normal approximations of confidence interval will be reasonable too. We can however also just use the profile likelihood CI's.
 
