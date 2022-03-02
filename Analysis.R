@@ -6,15 +6,14 @@
 
 library(dplyr)
 library(matrixStats)
-library(mice)
 library(MASS)
-library(miceadds)
 library(mitml)
 library(dataReporter)
 library(stringr)
 library(numbers)
 library(gamlss)
-
+library(mice)
+library(miceadds)
 
 estimate.pooler <- function(coef,sd){
   n_row <- nrow(coef)
@@ -45,9 +44,15 @@ subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tr
 
 ## load baseline data
 base_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv"),imputation=imp_nr)
+#base_data$sample_weights <- coalesce(base_data$sample_weights,0)
+
+## load followup sample
+CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
+#CSS$sample_weights <- coalesce(CSS$sample_weights,0)
 
 ## load population sample
 pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv"),imputation=imp_nr)
+#pop_data$sample_weights <- coalesce(pop_data$sample_weights,0)
 
 clin_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv"),imputation=impnr)
 clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
@@ -85,7 +90,6 @@ summary(base_data$bmi[base_data$imputation!=0])
 
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
-CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 
 ## risk profiles for CSS
 CSS$selfScore <- (CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileUseBeforeSleep=="2-4 times per week")*3+(CSS$mobileUseBeforeSleep=="Once a week")*3+(CSS$mobileUseBeforeSleep=="Every month or less")*2+(CSS$mobileUseBeforeSleep=="Never")*1+
@@ -227,10 +231,8 @@ RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
 
 ## Using the mice package with mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
-mod30<-(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
-mod30_p<-(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+sample_weights, weights=sample_weights, data=base_data_mids,family=binomial))
-mod25<-(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
-modnum<-(lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids))
+mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
 
 model30 <- summary(pool(mod30),conf.int = T)
@@ -263,11 +265,6 @@ bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
 bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
-hist(simulate(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup))$sim_1,xlim=c(-10,10)) #Too wide?
-summary(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0)))
-
-plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup)),residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup)))
-hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup)),breaks=200,xlim=c(-10,10))
 
 ## ændringer i bmi ja eller nej
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
@@ -281,23 +278,24 @@ bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_follow
 #The differences are not skewed, but their distribution is more narrow than a normal distribution - is this critical?
 
 #MUsing the mids object for simple lm. (for differencen)
+bmi_followup$sample_weights <- bmi_followup$sample_weights.y
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
-summary(pool(lm.mids(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids)))
+summary(pool(with(bmi_followup_mids,lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y))))
 
-plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))),
-     residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))))
-hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))),breaks=50)
+plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))),
+     residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))))
+hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))),breaks=50)
 
 #Alternative (better?) formulation
 
 ##ændringer i bmi over tid (men residual plottet siger at modellen er centreret omkring middelværdien)
-summary(pool(lm.mids(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids)), conf.int = T)
+summary(pool(with(bmi_followup_mids,lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y))), conf.int = T)
 
 ## residual plot
-plot(fitted(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))),
-     residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))))
-hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=subset(bmi_followup,imputation!=0))),breaks=50)
+plot(fitted(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))),
+     residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))))
+hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))),breaks=50)
 
 
 #Differences for indicators also (3 models per threshold: change, change from low to high group, and change from high to low group)
@@ -313,29 +311,29 @@ summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupat
 
 
 #Using the mids object
-summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
-summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
+summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
+summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
 
-summary(pool(glm.mids(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
-summary(pool(glm.mids(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
 
 bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<25),.imp="imputation")
-summary(pool(glm.mids(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
 bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<30),.imp="imputation")
-summary(pool(glm.mids(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
 
 bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=25),.imp="imputation")
-summary(pool(glm.mids(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
 bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=30),.imp="imputation")
-summary(pool(glm.mids(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
 
 #Alternative (better?) formulation with more easily interpretable parameters
 summary(glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
 summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
 
 #And with the mids object class
-summary(pool(glm.mids((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
-summary(pool(glm.mids((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup_mids,family=binomial)))
+summary(pool(with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
+summary(pool(with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
@@ -345,8 +343,8 @@ long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"user
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
 #summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=long_data_mids)))
-summary(pool(glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
-summary(pool(glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights, data=long_data_mids)))
+summary(pool(with(long_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
+summary(pool(with(long_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
 
 #Now with the gamlss for numeric bmi
 
@@ -383,33 +381,29 @@ RRresult_long$p.value <- pnorm(q=0,mean=RRresult_long$estimate,sd=RRresult_long$
 CSS_track$bmi[CSS_track$bmi==0]<-NA
 
 #Models
-summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial))
-hist(residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)))
-plot(fitted(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)))
+summary(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial))
+hist(residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)))
+plot(fitted(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)),residuals(glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)))
 
-summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial))
-hist(residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)))
-plot(fitted(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)),residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0),family=binomial)))
+summary(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial))
+hist(residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)))
+plot(fitted(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)),residuals(glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0),family=binomial)))
 
-summary(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0)))
-hist(residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))),breaks=40)
-plot(fitted(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))),residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,impnr!=0))))
-
-
-
-summary(new_model)
+summary(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0)))
+hist(residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0))),breaks=40)
+plot(fitted(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0))),residuals(lm(bmi ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(CSS_track,imputation!=0))))
 
 
 #Mice-based inference for three models:
 
-CSS_track_mids<-as.mids(CSS_track,.imp="impnr",.id="userid")
+CSS_track_mids<-as.mids(CSS_track,.imp="imputation",.id="userid")
 
-summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=CSS_track_mids,family=binomial)))
-summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=CSS_track_mids,family=binomial)))
-
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))))
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))))
 
 m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
             nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+#robust=TRUE? Doesn't change much when the fit is this good.
 
 m_coefs_CSS <- m_sds_CSS <- matrix(nrow=length(coef(m)),ncol=20)
 
@@ -475,13 +469,13 @@ RRresult_poptrack$p.value <- pnorm(q=0,mean=RRresult_poptrack$estimate,sd=RRresu
 
 
 ## BMI >=25
-summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids,family=binomial)),conf.int=T)
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 ## no adjustment for selfScoreCat
-summary(pool(glm.mids((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids,family=binomial)),conf.int=T)
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 
 
 ## BMI >30
-summary(pool(glm.mids((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights, data=pop_track_mids,family=binomial)),conf.int=T)
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 ## no adjustment for selfScoreCat
 
 
@@ -551,13 +545,15 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
 
-summary(pool(lm.mids(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#hdl
+summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))),sd=sd(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))))
 plot(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(lm.mids(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#ldl
+summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res=residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -565,7 +561,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(glm.mids(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids,family=Gamma)))
+#vldl
+summary(pool(gwith(data=clinical_mids, lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,family=Gamma))))
 hist(residuals(glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),breaks=20,prob=T)
 res <- residuals(glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -573,7 +570,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(glm.mids(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids,family=Gamma)))
+#triglycerids
+summary(pool(gwith(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,family=Gamma))))
 hist(residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),breaks=20,prob=T)
 res <- residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -581,7 +579,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)))
 plot(fitted(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)),residuals(glm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),family=Gamma)))
 
-summary(pool(lm.mids(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#hba1c
+summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res <- residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -589,7 +588,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(lm.mids(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#glucose
+summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res <- residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -597,7 +597,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(lm.mids(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#ratiowaisthip
+summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res <- residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -605,7 +606,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(lm.mids(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#sbp
+summary(pool(with(data=clinical_mids, lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res <- residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
@@ -613,7 +615,8 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(sbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-summary(pool(lm.mids(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=clinical_mids)))
+#dbp
+summary(pool(with(data=clinical_mids, lm(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
 hist(residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 res <- residuals(lm(dpb ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
