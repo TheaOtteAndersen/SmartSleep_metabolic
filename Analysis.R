@@ -1,3 +1,4 @@
+
 ###### Analysis of associations between metabolic biomarkers and smartphone activity ######
 
 
@@ -177,10 +178,6 @@ hist(base_data$weight,breaks=40)
 
 #Regression analyses
 
-
-
-
-
 #### BASE POPULATION
 
 #Base BMI models (test til om modellen kører)
@@ -231,10 +228,18 @@ RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
 
 ## Using the mice package with mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
+<<<<<<< Updated upstream
 mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
+=======
+mod30 <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
+mod30_p <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+sample_weights, weights=sample_weights, data=base_data_mids,family=binomial))
+mod25 <- (glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
+modnum <- (lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids))
+>>>>>>> Stashed changes
 
+## OR for BMI>30
 model30 <- summary(pool(mod30),conf.int = T)
 exp(model30$estimate)
 exp(model30$`2.5 %`)
