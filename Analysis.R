@@ -228,16 +228,16 @@ RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
 
 ## Using the mice package with mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
-<<<<<<< Updated upstream
+#<<<<<<< Updated upstream
 mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
-=======
+#=======
 mod30 <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
 mod30_p <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+sample_weights, weights=sample_weights, data=base_data_mids,family=binomial))
 mod25 <- (glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
 modnum <- (lm.mids(((bmi^lambda-1)/lambda) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids))
->>>>>>> Stashed changes
+#>>>>>>> Stashed changes
 
 ## OR for BMI>30
 model30 <- summary(pool(mod30),conf.int = T)
@@ -252,10 +252,11 @@ D1(mod30,mod30_p)
 summary(pool(mod25), conf.int = T)
 summary(pool(modnum), conf.int = T)
 
-
-
-
-
+## OR for BMI >25
+model25 <- summary(pool(mod25), conf.int=T)
+exp(model25$estimate)
+exp(model25$`2.5 %`)
+exp(model25$`97.5 %`)
 
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
@@ -302,43 +303,54 @@ plot(fitted(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupa
      residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))))
 hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y, data=subset(bmi_followup,imputation!=0))),breaks=50)
 
-
 #Differences for indicators also (3 models per threshold: change, change from low to high group, and change from high to low group)
 
-summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
-summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
-summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-
+summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
 #Using the mids object
-summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
-summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
+## change bmi 25
+#summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
+#summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
+summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
+summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
 
-summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
-summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
+## change from low to high group
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi.base<25),.imp="imputation")
+summary(pool(with(bmi_followup_mids,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
+summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
 
-bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<25),.imp="imputation")
-summary(pool(with(bmi_followup_mids,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
-bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base<30),.imp="imputation")
-summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
-
-bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=25),.imp="imputation")
-summary(pool(with(bmi_followup_mids,glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
-bmi_followup_mids <- as.mids(subset(bmi_followup,bmi_base>=30),.imp="imputation")
-summary(pool(with(bmi_followup_mids,glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))), conf.int = T)
+#change from high to low group
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi.base>=25),.imp="imputation")
+summary(pool(with(bmi_followup_mids,glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
+bmi_followup_mids <- as.mids(subset(bmi_followup,bmi.base>=30),.imp="imputation")
+summary(pool(with(bmi_followup_mids,glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
 
 #Alternative (better?) formulation with more easily interpretable parameters
-summary(glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
-summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
+summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
 #And with the mids object class
-summary(pool(with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
-summary(pool(with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y).y.y, weights=sample_weights,family=binomial))))
+change25 <- with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
+modelchange25 <- summary(pool(change25), conf.int = T)
+exp(modelchange25$estimate)
+exp(modelchange25$`2.5 %`)
+exp(modelchange25$`97.5 %`)
+
+##summary(pool(with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
+
+change30 <- with(bmi_followup_mid,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
+modelchange30 <- summary(pool(change30), conf.int = T)
+exp(modelchange30$estimate)
+bmi_followup_mids$data$basebmi25
+##OLD: summary(pool(with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
