@@ -15,6 +15,7 @@ library(numbers)
 library(gamlss)
 library(mice)
 library(miceadds)
+library(Publish)
 
 estimate.pooler <- function(coef,sd){
   n_row <- nrow(coef)
@@ -55,6 +56,7 @@ CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Ren
 pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv"),imputation=imp_nr)
 #pop_data$sample_weights <- coalesce(pop_data$sample_weights,0)
 
+## load clinical data (survey and clinical data)
 clin_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv"),imputation=impnr)
 clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
 
@@ -338,18 +340,23 @@ summary(glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+
 summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
 #And with the mids object class
+ ## change 25 
+bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 change25 <- with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
 modelchange25 <- summary(pool(change25), conf.int = T)
 exp(modelchange25$estimate)
 exp(modelchange25$`2.5 %`)
 exp(modelchange25$`97.5 %`)
-
 ##summary(pool(with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
 
-change30 <- with(bmi_followup_mid,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
+##change 30
+bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
+change30 <- with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
 modelchange30 <- summary(pool(change30), conf.int = T)
 exp(modelchange30$estimate)
-bmi_followup_mids$data$basebmi25
+exp(modelchange30$`2.5 %`)
+exp(modelchange30$`97.5 %`)
+
 ##OLD: summary(pool(with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
@@ -486,44 +493,91 @@ RRresult_poptrack$p.value <- pnorm(q=0,mean=RRresult_poptrack$estimate,sd=RRresu
 
 
 ## BMI >=25
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+#summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25 <- with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25 <- summary(pool(Random25), conf.int=T)
+exp(modelRandom25$estimate)
+exp(modelRandom25$`2.5 %`)
+exp(modelRandom25$`97.5 %`)
+
 ## no adjustment for selfScoreCat
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int=T)
+exp(modelRandom25No$estimate)
+exp(modelRandom25No$`2.5 %`)
+exp(modelRandom25No$`97.5 %`)
+
+## BMI >30
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30 <- with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30 <- summary(pool(Random30), conf.int = T)
+exp(modelRandom30$estimate)
+exp(modelRandom30$`2.5 %`)
+exp(modelRandom30$`97.5 %`)
+
+## no adjustment for selfScoreCat
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+exp(modelRandom30No$estimate)
+exp(modelRandom30No$`2.5 %`)
+exp(modelRandom30No$`97.5 %`)
+
+
+####### BMI and risk profiles
+
+## bmi >25
+#summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25Risk <- with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25Risk <- summary(pool(Random25Risk), conf.int = T)
+exp(modelRandom25Risk$estimate)
+exp(modelRandom25Risk$`2.5 %`)
+exp(modelRandom25Risk$`97.5 %`)
 
 
 ## BMI >30
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-## no adjustment for selfScoreCat
+#summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30Risk <- with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30Risk <- summary(pool(Random30Risk), conf.int = T)
+exp(modelRandom30Risk$estimate)
+exp(modelRandom30Risk$`2.5 %`)
+exp(modelRandom30Risk$`97.5 %`)
 
-
-
-
-
-
-
-
+###############################################################################
+###############################################################################
+###############################################################################
 
 #Analysis of the clinical sample data - interest in biomarkers
 
+## merge survey and clinical data
 clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
+## merge with tracking data
 clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
 
-clinical_sample$bmi.clinical[clinical_sample$bmi.clinical==0] <- NA
-clinical_sample$bmi.clinical[clinical_sample$height<100 & clinical_sample$imputation!=0] <- (clinical_sample$weight/(((clinical_sample$height+100)/100)^2))[clinical_sample$height<100  & clinical_sample$imputation!=0]
-clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0] <- clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0]+100 
-clinical_sample$bmi.clinical[clinical_sample$height==clinical_sample$weight]<-NA
-clinical_sample$bmi.clinical[clinical_sample$bmi.clinical<14]<-NA
+## no cleanng in bmi.clinical as it should be correct compared to self-reports
+#clinical_sample$bmi.clinical[clinical_sample$bmi.clinical==0] <- NA
+#clinical_sample$bmi.clinical[clinical_sample$height<100 & clinical_sample$imputation!=0] <- (clinical_sample$weight/(((clinical_sample$height+100)/100)^2))[clinical_sample$height<100  & clinical_sample$imputation!=0]
+#clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0] <- clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0]+100 
+#clinical_sample$bmi.clinical[clinical_sample$height==clinical_sample$weight]<-NA#
+#clinical_sample$bmi.clinical[clinical_sample$bmi.clinical<14]<-NA
 
 clinical_sample$selfScore <- (clinical_sample$mobileUseBeforeSleep=="5-7 times per week")*4+(clinical_sample$mobileUseBeforeSleep=="2-4 times per week")*3+(clinical_sample$mobileUseBeforeSleep=="Once a week")*3+(clinical_sample$mobileUseBeforeSleep=="Every month or less")*2+(clinical_sample$mobileUseBeforeSleep=="Never")*1+
   (clinical_sample$mobileUseNight=="Every night or almost every night")*4+(clinical_sample$mobileUseNight=="A few times a week")*3+(clinical_sample$mobileUseNight=="A few times a month or less")*2+(clinical_sample$mobileUseNight=="Never")*1+
   (clinical_sample$mobileCheck==">20 times an hour")*4+(clinical_sample$mobileCheck=="11-20 times an hour")*4+(clinical_sample$mobileCheck=="5-10 times an hour")*3+(clinical_sample$mobileCheck=="1-4 times an hour")*2+(clinical_sample$mobileCheck=="Every 2nd hour")*2+(clinical_sample$mobileCheck=="Several times a day")*1+(clinical_sample$mobileCheck=="Once a day or less")*1+
   (clinical_sample$pmpuScale<=14)*1+(clinical_sample$pmpuScale>14 & clinical_sample$pmpuScale<17)*2+(clinical_sample$pmpuScale>=17 & clinical_sample$pmpuScale<19)*3+(clinical_sample$pmpuScale>=19)*4
-summary(clinical_sample$selfScore[clinical_sample$impnr!=0])
+summary(clinical_sample$selfScore[clinical_sample$imputation!=0])
 clinical_sample$selfScoreCat <- NA
 clinical_sample$selfScoreCat[!is.na(clinical_sample$selfScore)]<-"1"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=8]="2"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=10]="3"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
+table(clinical_sample$selfScoreCat, useNA="always")
+
+## descriptives of clinical sample
+publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))
+
+publish(univariateTable(selfScoreCat ~ bmi,data=clinical_sample, column.percent=TRUE))
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
 
@@ -536,8 +590,31 @@ clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
 clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(clinical_sample$age.y,2+(mod(nchar(clinical_sample$age.y),4)==1),2+(mod(nchar(clinical_sample$age.y),4)==1)),".",
                  substr(clinical_sample$age.y,3+(mod(nchar(clinical_sample$age.y),4)!=3),3+(mod(nchar(clinical_sample$age.y),4)!=3))))
 
+## systolic blood pressure
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
-clinical_sample$dpb<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
+publish(univariateTable(selfScoreCat ~ sbp,data=clinical_sample, column.percent=TRUE))
+
+## categorize systolic blood pressure into high (>=140) and normal (<140)
+clinical_sample$sbpCat[clinical_sample$sbp>=140] <- "High"
+clinical_sample$sbpCat[clinical_sample$sbp<140] <- "Normal"
+publish(univariateTable( ~ sbpCat,data=clinical_sample, column.percent=TRUE))
+
+# diastolic blood pressure
+clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
+publish(univariateTable(selfScoreCat ~ dbp,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$dbpCat[clinical_sample$dbp>=90] <- "High"
+clinical_sample$dbpCat[clinical_sample$dbp<90] <- "Normal"
+table(clinical_sample$dbpCat, useNA="always")
+
+## hip waist ratio
+
+publish(univariateTable(selfScoreCat ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
+clinical_sample$ratiowaisthipCat[clinical_sample$ratiowaisthip>=0.85] <- "High"
+clinical_sample$ratiowaisthipCat[clinical_sample$ratiowaisthip<0.85] <- "Normal"
+table(clinical_sample$ratiowaisthipCat)
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
 
@@ -559,11 +636,27 @@ hist(as.numeric(clinical_sample$ratiowaisthip),breaks=20)
 hist(rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T),breaks=20)
 hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T),breaks=20)
 
+clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
+publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
+publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
+publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
+publish(univariateTable(selfScoreCat ~ vldl,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
+publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
+table(clinical_sample$age.x)
 
 #hdl
-summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation))))
+summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age.x+education+occupation))))
 hist(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
 lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))),sd=sd(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))))
 plot(residuals(lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
