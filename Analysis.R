@@ -646,7 +646,7 @@ clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 
 hist(as.numeric(clinical_sample$hdl),breaks=20)
 hist(as.numeric(clinical_sample$ldl),breaks=20)
-hist(as.numeric(clinical_sample$vldl),breaks=20)
+hist(as.numeric(clinical_sample$t_cholesterol),breaks=20)
 hist(as.numeric(clinical_sample$triglycerids),breaks=40)
 hist(as.numeric(clinical_sample$hba1c),breaks=40)
 hist(as.numeric(clinical_sample$glucose),breaks=40)
@@ -656,20 +656,54 @@ hist(as.numeric(clinical_sample$ratiowaisthip),breaks=20)
 hist(rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T),breaks=20)
 hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T),breaks=20)
 
+## HDL
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
 publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
 
+## categorize
+clinical_sample$hdlCat[clinical_sample$hdl<=1.2] <- "Bad"
+clinical_sample$hdlCat[clinical_sample$hdl>1.2] <- "Good"
+table(clinical_sample$hdlCat)
+
+publish(univariateTable(selfScoreCat ~ hdlCat,data=clinical_sample, column.percent=TRUE))
+
+## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
 publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
+
+## categorize LDL
+clinical_sample$ldlCat[clinical_sample$ldl>=4.3] <- "Bad"
+clinical_sample$ldlCat[clinical_sample$ldl<4.3] <- "Good"
+publish(univariateTable(selfScoreCat ~ ldlCat,data=clinical_sample, column.percent=TRUE))
+
+## triglycerides
 
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
 publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
-publish(univariateTable(selfScoreCat ~ vldl,data=clinical_sample, column.percent=TRUE))
+clinical_sample$triglyceridsCat[clinical_sample$triglycerids>=1.2] <- "Bad"
+clinical_sample$triglyceridsCat[clinical_sample$triglycerids<1.2] <- "Good"
+publish(univariateTable(selfScoreCat ~ triglyceridsCat,data=clinical_sample, column.percent=TRUE))
 
+
+## hba1c
+clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
+publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+
+## categorize hba1c
+clinical_sample$hba1cCat[clinical_sample$hba1c>=44] <- "Bad"
+clinical_sample$hba1cCat[clinical_sample$hba1c<44] <- "Good"
+publish(univariateTable(selfScoreCat ~ hba1cCat,data=clinical_sample, column.percent=TRUE))
+
+
+## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
 publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol>=5] <- "Bad"
+clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol<5] <- "Good"
+publish(univariateTable(selfScoreCat ~ t_cholesterolCat,data=clinical_sample, column.percent=TRUE))
+
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
 table(clinical_sample$age.x)
