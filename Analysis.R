@@ -22,7 +22,7 @@ estimate.pooler <- function(coef,sd){
   n_col <- ncol(coef)
   
   coefs <- rowMeans(coef)
-  sds <- sqrt(rowMeans(sd^2)+(1+1/n_col)*sum((coef-coefs)^2)/(n_col-1))
+  sds <- sqrt(rowMeans(sd^2)+(1+1/n_col)*rowSums((coef-coefs)^2)/(n_col-1))
   df <- data.frame("estimate"=coefs,"sd"=sds,"lower.CI"=coefs-1.96*sds,"upper.CI"=coefs+1.96*sds)
   return(df)
 }
