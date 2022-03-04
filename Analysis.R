@@ -651,7 +651,6 @@ publish(univariateTable(selfScoreCat ~ vldl,data=clinical_sample, column.percent
 clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
 publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
 
-
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
 table(clinical_sample$age.x)
 
