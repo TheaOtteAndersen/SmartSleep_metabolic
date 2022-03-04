@@ -662,8 +662,8 @@ publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column
 clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
 publish(univariateTable(selfScoreCat ~ vldl,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
-publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
+publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
 table(clinical_sample$age.x)
