@@ -196,6 +196,7 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 
 #Better alternative: Pretty good fit. A generalized family of models.
 
+base_data_mids <- as.mids(base_data,.imp="imputation")
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 summary(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
 
@@ -211,7 +212,7 @@ confint(m)
 #Works with mids? Yes, so below manual pooling is unneccessary.
 
 #Old manual way
-m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
+#m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)), family = BCCG)
@@ -236,6 +237,7 @@ base_data_mids <- as.mids(base_data,.imp="imputation")
 #<<<<<<< Updated upstream
 mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+
 
 #=======
 mod30 <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
@@ -262,6 +264,8 @@ exp(model25$estimate)
 exp(model25$`2.5 %`)
 exp(model25$`97.5 %`)
 
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
 
@@ -269,7 +273,7 @@ bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("C
 
 ## difference mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
-mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
+mean(bmi_followup$difference[!is.na(bmi_followup$difference)]) #ændring i 0.20 i BMI fra baseline til follow-up
 
 bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
 bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
@@ -277,6 +281,7 @@ bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
 ## ændringer i bmi ja eller nej
+
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
@@ -402,8 +407,8 @@ rownames(RRresult_long) <- names(coef(gamlss(bmi~(selfScoreCat+age+gender+educat
 RRresult_long$p.value <- pnorm(q=0,mean=RRresult_long$estimate,sd=RRresult_long$sd)
 
 
-
-
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 
 #####Tracking data for the followup CSS sample
 
@@ -463,7 +468,8 @@ RRresult_CSStrack$p.value <- pnorm(q=0,mean=RRresult_CSStrack$estimate,sd=RRresu
 
 
 
-
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 
 #Tracking data: Population sample (random sample) - same analysis
 
@@ -539,7 +545,7 @@ exp(modelRandom30No$`2.5 %`)
 exp(modelRandom30No$`97.5 %`)
 
 
-####### BMI and risk profiles
+####### BMI and self-reported risk profiles
 
 ## bmi >25
 #summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
