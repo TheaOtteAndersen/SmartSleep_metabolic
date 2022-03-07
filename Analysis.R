@@ -16,6 +16,7 @@ library(gamlss)
 library(mice)
 library(miceadds)
 library(Publish)
+library(ggplot2)
 
 estimate.pooler <- function(coef,sd){
   n_row <- nrow(coef)
@@ -80,6 +81,10 @@ base_data$selfScoreCat[base_data$selfScore>=10]="3"
 base_data$selfScoreCat[base_data$selfScore>=12]="4"
 table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always") 
 
+# bar chart selfScoreCat 
+ggplot(base_data, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+
 ## bmi for baseline data 
 base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
 base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
@@ -106,6 +111,10 @@ CSS$selfScoreCat[CSS$selfScore>=8]="2"
 CSS$selfScoreCat[CSS$selfScore>=10]="3"
 CSS$selfScoreCat[CSS$selfScore>=12]="4"
 table(CSS$selfScoreCat[CSS$impnr!=0], useNA="always")
+
+# bar chart selfScoreCat 
+ggplot(CSS, aes(x = factor(selfScoreCat))) +
+  geom_bar()
 
 ## bmi CSS
 CSS$bmi[CSS$bmi==0] <- NA
@@ -281,7 +290,7 @@ bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
 ## ændringer i bmi ja eller nej
-
+table(bmi_followup$bmi25change)
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
@@ -475,7 +484,13 @@ RRresult_CSStrack$p.value <- pnorm(q=0,mean=RRresult_CSStrack$estimate,sd=RRresu
 
 hist(pop_track$bmi,breaks=50,xlim=c(0,50))
 
+ggplot(pop_track, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+ggplot(pop_track, aes(x = factor(cluster))) +
+  geom_bar()
 
+11508/21
+548/
 #analyses
 
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
