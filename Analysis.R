@@ -16,6 +16,7 @@ library(gamlss)
 library(mice)
 library(miceadds)
 library(Publish)
+library(ggplot2)
 
 estimate.pooler <- function(coef,sd){
   n_row <- nrow(coef)
@@ -80,6 +81,10 @@ base_data$selfScoreCat[base_data$selfScore>=10]="3"
 base_data$selfScoreCat[base_data$selfScore>=12]="4"
 table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always") 
 
+# bar chart selfScoreCat 
+ggplot(base_data, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+
 ## bmi for baseline data 
 base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
 base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
@@ -130,6 +135,10 @@ CSS$selfScoreCat[CSS$selfScore>=8]="2"
 CSS$selfScoreCat[CSS$selfScore>=10]="3"
 CSS$selfScoreCat[CSS$selfScore>=12]="4"
 table(CSS$selfScoreCat[CSS$impnr!=0], useNA="always")
+
+# bar chart selfScoreCat 
+ggplot(CSS, aes(x = factor(selfScoreCat))) +
+  geom_bar()
 
 ## bmi CSS
 CSS$bmi[CSS$bmi==0] <- NA
@@ -220,6 +229,7 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 
 #Better alternative: Pretty good fit. A generalized family of models.
 
+base_data_mids <- as.mids(base_data,.imp="imputation")
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 summary(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))),confint=T)
 confint(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
@@ -238,7 +248,7 @@ confint(m)
 #Works with mids? Yes, so below manual pooling is unneccessary.
 
 #Old manual way
-m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
+#m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
 
 for (i in 1:20){
   m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)), family = BCCG)
@@ -262,6 +272,7 @@ RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
 #<<<<<<< Updated upstream
 mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+
 
 #=======
 mod30 <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
@@ -288,11 +299,24 @@ exp(model25$estimate)
 exp(model25$`2.5 %`)
 exp(model25$`97.5 %`)
 
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 #BMI followup difference - match with emailAddress or CS_ID
+#y: base, x: followup
+
+bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
+
+## difference mellem follow-up og baseline
+bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
+mean(bmi_followup$difference[!is.na(bmi_followup$difference)]) #ændring i 0.20 i BMI fra baseline til follow-up
+
+bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
+bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
 ## ændringer i bmi ja eller nej
+table(bmi_followup$bmi25change)
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
@@ -425,8 +449,8 @@ rownames(RRresult_long) <- names(coef(gamlss(bmi~(selfScoreCat+age+gender+educat
 RRresult_long$p.value <- pnorm(q=0,mean=RRresult_long$estimate,sd=RRresult_long$sd)
 
 
-
-
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 
 #####Tracking data for the followup CSS sample
 
@@ -486,13 +510,20 @@ RRresult_CSStrack$p.value <- pnorm(q=0,mean=RRresult_CSStrack$estimate,sd=RRresu
 
 
 
-
+# --------------------------------------------------------------------------- ##
+# --------------------------------------------------------------------------- ##
 
 #Tracking data: Population sample (random sample) - same analysis
 
 hist(pop_track$bmi,breaks=50,xlim=c(0,50))
 
+ggplot(pop_track, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+ggplot(pop_track, aes(x = factor(cluster))) +
+  geom_bar()
 
+11508/21
+548/
 #analyses
 
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
@@ -562,7 +593,7 @@ exp(modelRandom30No$`2.5 %`)
 exp(modelRandom30No$`97.5 %`)
 
 
-####### BMI and risk profiles
+####### BMI and self-reported risk profiles
 
 ## bmi >25
 #summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
@@ -663,7 +694,7 @@ clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 
 hist(as.numeric(clinical_sample$hdl),breaks=20)
 hist(as.numeric(clinical_sample$ldl),breaks=20)
-hist(as.numeric(clinical_sample$vldl),breaks=20)
+hist(as.numeric(clinical_sample$t_cholesterol),breaks=20)
 hist(as.numeric(clinical_sample$triglycerids),breaks=40)
 hist(as.numeric(clinical_sample$hba1c),breaks=40)
 hist(as.numeric(clinical_sample$glucose),breaks=40)
@@ -673,20 +704,53 @@ hist(as.numeric(clinical_sample$ratiowaisthip),breaks=20)
 hist(rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T),breaks=20)
 hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T),breaks=20)
 
+## HDL
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
 publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
 
+## categorize
+clinical_sample$hdlCat[clinical_sample$hdl<=1.2] <- "Bad"
+clinical_sample$hdlCat[clinical_sample$hdl>1.2] <- "Good"
+table(clinical_sample$hdlCat)
+
+publish(univariateTable(selfScoreCat ~ hdlCat,data=clinical_sample, column.percent=TRUE))
+
+## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
 publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
+
+## categorize LDL
+clinical_sample$ldlCat[clinical_sample$ldl>=4.3] <- "Bad"
+clinical_sample$ldlCat[clinical_sample$ldl<4.3] <- "Good"
+publish(univariateTable(selfScoreCat ~ ldlCat,data=clinical_sample, column.percent=TRUE))
+
+## triglycerides
 
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
 publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
-publish(univariateTable(selfScoreCat ~ vldl,data=clinical_sample, column.percent=TRUE))
+clinical_sample$triglyceridsCat[clinical_sample$triglycerids>=1.2] <- "Bad"
+clinical_sample$triglyceridsCat[clinical_sample$triglycerids<1.2] <- "Good"
+publish(univariateTable(selfScoreCat ~ triglyceridsCat,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
+
+## hba1c
+clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
 publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+
+## categorize hba1c
+clinical_sample$hba1cCat[clinical_sample$hba1c>=44] <- "Bad"
+clinical_sample$hba1cCat[clinical_sample$hba1c<44] <- "Good"
+publish(univariateTable(selfScoreCat ~ hba1cCat,data=clinical_sample, column.percent=TRUE))
+
+
+## total cholesterol
+clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
+publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+
+clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol>=5] <- "Bad"
+clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol<5] <- "Good"
+publish(univariateTable(selfScoreCat ~ t_cholesterolCat,data=clinical_sample, column.percent=TRUE))
 
 
 #Models - multiple testing issue if we are going to 'pick and collect' which responses we would like to look at.
