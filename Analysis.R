@@ -245,28 +245,6 @@ confint(m)
 #m_simple <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), weights=sample_weights,family = BCCG)
 #plot(m_simple)
 
-#Works with mids? Yes, so below manual pooling is unneccessary.
-
-#Old manual way
-#m_coefs <- m_sds <- matrix(nrow=length(coef(m)),ncol=20)
-
-for (i in 1:20){
-  m <- gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)), family = BCCG)
-  m_coefs[,i] <- coef(m)
-  m_sds[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
-  
-  #m_list[[i]] <- m
-  #m_sum_list[[i]] <- m_sum
-}
-
-#Now we may simply combine results using Rubin's rules.
-
-RRresult <- estimate.pooler(m_coefs,m_sds)
-rownames(RRresult) <- names(coef(gamlss(bmi ~ (selfScoreCat+age+gender+education+occupation), sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)), family = BCCG)))
-RRresult$p.value <- pnorm(q=0,mean=RRresult$estimate,sd=RRresult$sd)
-
-
-
 
 ## Using the mice package with mids objects
 #<<<<<<< Updated upstream
@@ -397,6 +375,7 @@ exp(modelchange30$estimate)
 exp(modelchange30$`2.5 %`)
 exp(modelchange30$`97.5 %`)
 
+
 ## ----- ##
 #Final change analyses (per Naja's requests)
 ## ----- ##
@@ -415,38 +394,18 @@ long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"user
 
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
-#summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=long_data_mids)))
-summary(pool(with(long_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
-summary(pool(with(long_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
-
-#Now with the gamlss for numeric bmi
-
 m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
             nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG,method=RS(100))
 
 summary(pool(with(long_data_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
-                           nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights,family=BCCG,method=RS(100)))))
+                                        nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights,family=BCCG,method=RS(100)))))
 
-#Old manual way
-m_coefs_long <- m_sds_long <- matrix(nrow=length(coef(m)),ncol=20)
 
-for (i in 1:20){
-  m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
-              nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==i)), family = BCCG,method=RS(100))
-  m_coefs_long[,i] <- coef(m)
-  m_sds_long[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
-  
-  #m_list[[i]] <- m
-  #m_sum_list[[i]] <- m_sum
-}
 
-#Now we may simply combine results using Rubin's rules.
+#summary(pool(lm.mids(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=long_data_mids)))
+summary(pool(with(long_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
+summary(pool(with(long_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation)*time,family=binomial, weights=sample_weights))))
 
-RRresult_long <- estimate.pooler(m_coefs_long,m_sds_long)
-rownames(RRresult_long) <- names(coef(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
-                                        nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)), family = BCCG)))
-
-RRresult_long$p.value <- pnorm(q=0,mean=RRresult_long$estimate,sd=RRresult_long$sd)
 
 
 # --------------------------------------------------------------------------- ##
@@ -485,29 +444,6 @@ m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+
 summary(pool(with(CSS_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
                            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
-#Old manual way
-m_coefs_CSS <- m_sds_CSS <- matrix(nrow=length(coef(m)),ncol=20)
-
-for (i in 1:20){
-  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)), family = BCCG,method=RS(100))
-  m_coefs_CSS[,i] <- coef(m)
-  m_sds_CSS[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
-  
-  #m_list[[i]] <- m
-  #m_sum_list[[i]] <- m_sum
-}
-
-#Now we may simply combine results using Rubin's rules.
-
-RRresult_CSStrack <- estimate.pooler(m_coefs_CSS,m_sds_CSS)
-rownames(RRresult_CSStrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)), family = BCCG)))
-RRresult_CSStrack$p.value <- pnorm(q=0,mean=RRresult_CSStrack$estimate,sd=RRresult_CSStrack$sd)
-
-
-
-
 
 
 # --------------------------------------------------------------------------- ##
@@ -538,26 +474,6 @@ m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+
 
 summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
                                         nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
-
-#Old manual way
-m_coefs_pop <- m_sds_pop <- matrix(nrow=length(coef(m)),ncol=20)
-
-for (i in 1:20){
-  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)), family = BCCG,method=RS(100))
-  m_coefs_pop[,i] <- coef(m)
-  m_sds_pop[,i] <- diag(vcov(m))[1:length(coef(m))] #or use rvcov for robust standard errors - if the variance model is thought to be incorrect
-  
-  #m_list[[i]] <- m
-  #m_sum_list[[i]] <- m_sum
-}
-
-#Now we may simply combine results using Rubin's rules.
-
-RRresult_poptrack <- estimate.pooler(m_coefs_pop,m_sds_pop)
-rownames(RRresult_poptrack) <- names(coef(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-                                                 nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)), family = BCCG)))
-RRresult_poptrack$p.value <- pnorm(q=0,mean=RRresult_poptrack$estimate,sd=RRresult_poptrack$sd)
 
 
 ## BMI >=25
