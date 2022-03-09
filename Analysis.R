@@ -489,8 +489,7 @@ ggplot(pop_track, aes(x = factor(selfScoreCat))) +
 ggplot(pop_track, aes(x = factor(cluster))) +
   geom_bar()
 
-11508/21
-548/
+
 #analyses
 
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
