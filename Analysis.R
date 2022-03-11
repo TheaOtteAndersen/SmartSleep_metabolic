@@ -85,6 +85,14 @@ table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always")
 ggplot(base_data, aes(x = factor(selfScoreCat))) +
   geom_bar()
 
+## tjek risk profiles
+publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
+publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
+publish(univariateTable( ~ mobileCheck,data=base_data, column.percent=TRUE))
+table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4)/20
+
+publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
+
 ## bmi for baseline data 
 base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
 base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
@@ -250,7 +258,7 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 summary(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))),confint=T)
-confint(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
+#confint(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
 
 #Checking the validity of Wald intervals
 
@@ -384,6 +392,9 @@ table(bmi_followup$bmi25change)
 #bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 #bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 #bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
+bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
+bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
+bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
 
 #bmi_followup$bmi30change <- as.numeric((bmi_followup$bmi.fu>=30)!=(bmi_followup$bmi.base>=30))
 #bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.fu>=30)>(bmi_followup$bmi.base>=30))
@@ -469,6 +480,26 @@ bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25 & !is.na(sam
 summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
 bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30 & !is.na(sample_weights)),.imp="imputation")
 summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
+
+## from below 25 to above 25
+bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25),.imp="imputation")
+summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))), conf.int = T)
+NewBmi25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+ModelNewBmi25 <- summary(pool(NewBmi25), conf.int = T)
+exp(ModelNewBmi25$estimate)
+exp(ModelNewBmi25$`2.5 %`)
+exp(ModelNewBmi25$`97.5 %`)
+
+## from below 30 to above 30
+#bmi_followup_mids_30risk <- as.mids(subset(bmi_followup_30risk,bmi.base<30),.imp="imputation")
+bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
+#summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))), conf.int = T)
+newBmi30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+modelnewBmi30 <- summary(pool(newBmi30), conf.int = T)
+exp(modelnewBmi30$estimate)
+exp(modelnewBmi30$`2.5 %`)
+exp(modelnewBmi30$`97.5 %`)
+
 
 ## And then the long format for the numeric change:
 
@@ -563,6 +594,11 @@ cbind(out_ints,conf.res,coef(m))
 #Here the important estimates are the time x category interaction term estimates
 summary(pool(with(long_data_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
                                         nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights,family=BCCG,method=RS(100),robust=T))))
+                                        
+## 95%CI
+confint(pool(long_data_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,
+                                   nu.formula = ~ (selfScoreCat+age+gender+education+occupation)*time,weights=sample_weights,family=BCCG,method=RS(100))))
+
 
 confint(pool(with(long_data_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ 1,
                                         nu.formula = ~ 1,weights=sample_weights,family=BCCG,method=RS(100)))),type="likelihood") #It doesn't want to give me what I want...
@@ -690,15 +726,30 @@ ggplot(pop_track, aes(x = factor(selfScoreCat))) +
 ggplot(pop_track, aes(x = factor(cluster))) +
   geom_bar()
 
+
 #analyses
 
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
 ## bmi kontinuert 
 
-
 m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
             nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
+## no adjustment for risk profiles
+summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),
+                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+
+## 95% CI (ikke kørt endnu)
+confint(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),
+                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+
+
+## no adjustment for clusters
+summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+gender+education+occupation),
+                                        nu.formula = ~ (selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+
+
+## mutually adjusting for clusters/risk profiles
 summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
                                         nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
@@ -787,7 +838,7 @@ exp(modelRandom25No$`2.5 %`)
 exp(modelRandom25No$`97.5 %`)
 
 ## BMI >30
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+#summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30 <- with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30 <- summary(pool(Random30), conf.int = T)
 exp(modelRandom30$estimate)

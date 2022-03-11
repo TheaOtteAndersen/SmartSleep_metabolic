@@ -107,6 +107,9 @@ publish(univariateTable(selfScoreCat ~ education,data=base_data, column.percent=
 ## occupation
 publish(univariateTable(selfScoreCat ~ occupation,data=base_data, column.percent=TRUE))
 
+## BMI
+publish(univariateTable(selfScoreCat ~ bmi,data=base_data, column.percent=TRUE))
+
 # --------------------------------------------------------------------------- ##
 
 ## Population Sample
