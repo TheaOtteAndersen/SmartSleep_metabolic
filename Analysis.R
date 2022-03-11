@@ -1153,22 +1153,22 @@ cbind(confint(glm(as.numeric(dbp) ~ cluster1prob+cluster2prob+cluster4prob+age.x
 
 #Wald confidence intervals
 
-dbp_int <- summary(pool(with(data=clinical_mids, lm(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+dbp_int <- summary(pool(with(data=clinical_mids, lm(dbp ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+t_chol_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
+sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+tri_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+vldl_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
 df_ints <- data.frame(rbind(dbp_int[2,],sbp_int[2,],hba1c_int[2,],hdl_int[2,],ldl_int[2,],vldl_int[2,],t_chol_int [2,],tri_int[2,],glu_int[2,],wh_int[2,]),
                       rbind(dbp_int[3,],sbp_int[3,],hba1c_int[3,],hdl_int[3,],ldl_int[3,],vldl_int[3,],t_chol_int [3,],tri_int[3,],glu_int[3,],wh_int[3,]),
                       rbind(dbp_int[4,],sbp_int[4,],hba1c_int[4,],hdl_int[4,],ldl_int[4,],vldl_int[4,],t_chol_int [4,],tri_int[4,],glu_int[4,],wh_int[4,]))
 
-colnames(df_ints) <- c("type.1.estimate","type.1.lower","type.1.upper","type.2.estimate","type.2.lower","type.2.upper","type.4.estimate","type.4.lower","type.4.upper")
+colnames(df_ints) <- c("type.1.estimate","type.1.lower","type.1.upper","type.1.pvalue","type.2.estimate","type.2.lower","type.2.upper","type.2.pvalue","type.4.estimate","type.4.lower","type.4.upper","type.4.pvalue")
 rownames(df_ints) <- c("dbp","sbp","hba1c","hdl","ldl","vldl","total cholesterol","triglycerides","glucose","w/h ratio")
 df_ints
 
@@ -1191,20 +1191,27 @@ df_ints
 #hba1c_class_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(hba1cCat) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))))$estimate[2:4],
 #                 summary(pool(with(data=clinical_mids, glm(as.numeric(hba1cCat) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))))$std.error[2:4])
 
-hdl_class_int <- summary(pool(with(data=clinical_mids, glm(hdlCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(hdl_class_sum[,1]-1.96*hdl_class_sum[,2],hdl_class_sum[,1]+1.96*hdl_class_sum[,2])
+hdl_class_int <- summary(pool(with(data=clinical_mids, glm(hdlCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_class_sum[,1]-1.96*hdl_class_sum[,2],hdl_class_sum[,1]+1.96*hdl_class_sum[,2])
 
-ldl_class_int <- summary(pool(with(data=clinical_mids, glm(ldlCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(ldl_class_sum[,1]-1.96*ldl_class_sum[,2],ldl_class_sum[,1]+1.96*ldl_class_sum[,2])
+ldl_class_int <- summary(pool(with(data=clinical_mids, glm(ldlCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_class_sum[,1]-1.96*ldl_class_sum[,2],ldl_class_sum[,1]+1.96*ldl_class_sum[,2])
 
-t_chol_class_int <- summary(pool(with(data=clinical_mids, glm(t_cholesterolCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(t_chol_class_sum[,1]-1.96*t_chol_class_sum[,2],t_chol_class_sum[,1]+1.96*t_chol_class_sum[,2])
+t_chol_class_int <- summary(pool(with(data=clinical_mids, glm(t_cholesterolCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_class_sum[,1]-1.96*t_chol_class_sum[,2],t_chol_class_sum[,1]+1.96*t_chol_class_sum[,2])
 
-tri_class_int <- summary(pool(with(data=clinical_mids, glm(triglyceridsCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(tri_class_sum[,1]-1.96*tri_class_sum[,2],tri_class_sum[,1]+1.96*tri_class_sum[,2])
+tri_class_int <- summary(pool(with(data=clinical_mids, glm(triglyceridsCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_class_sum[,1]-1.96*tri_class_sum[,2],tri_class_sum[,1]+1.96*tri_class_sum[,2])
 
-hba1c_class_int <- summary(pool(with(data=clinical_mids, glm(hba1cCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %")]#cbind(hba1c_class_sum[,1]-1.96*hba1c_class_sum[,2],hba1c_class_sum[,1]+1.96*hba1c_class_sum[,2])
+hba1c_class_int <- summary(pool(with(data=clinical_mids, glm(hba1cCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_class_sum[,1]-1.96*hba1c_class_sum[,2],hba1c_class_sum[,1]+1.96*hba1c_class_sum[,2])
 
-df_class_ints <- data.frame(rbind(hdl_class_int[2,],ldl_class_int[2,],t_chol_class_int[2,],tri_class_int[2,],hba1c_int[2,]),
-                            rbind(hdl_class_int[3,],ldl_class_int[3,],t_chol_class_int[3,],tri_class_int[3,],hba1c_int[3,]),
-                            rbind(hdl_class_int[4,],ldl_class_int[4,],t_chol_class_int[4,],tri_class_int[4,],hba1c_int[4,]))
+dbp_class_int <- summary(pool(with(data=clinical_mids, glm(dbpCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_class_sum[,1]-1.96*t_chol_class_sum[,2],t_chol_class_sum[,1]+1.96*t_chol_class_sum[,2])
 
-colnames(df_class_ints) <- c("type.1.estimate","type.1.lower","type.1.upper","type.2.estimate","type.2.lower","type.2.upper","type.4.estimate","type.4.lower","type.4.upper")
-rownames(df_class_ints) <- c("hdl","ldl","total cholesterol","triglycerids","hba1c")
+sbp_class_int <- summary(pool(with(data=clinical_mids, glm(sbpCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_class_sum[,1]-1.96*tri_class_sum[,2],tri_class_sum[,1]+1.96*tri_class_sum[,2])
+
+rwh_class_int <- summary(pool(with(data=clinical_mids, glm(ratiowaisthipCat ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=binomial))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_class_sum[,1]-1.96*hba1c_class_sum[,2],hba1c_class_sum[,1]+1.96*hba1c_class_sum[,2])
+
+
+df_class_ints <- data.frame(rbind(hdl_class_int[2,],ldl_class_int[2,],t_chol_class_int[2,],tri_class_int[2,],hba1c_int[2,],dbp_class_int[2,],sbp_class_int[2,],rwh_class_int[2,]),
+                            rbind(hdl_class_int[3,],ldl_class_int[3,],t_chol_class_int[3,],tri_class_int[3,],hba1c_int[3,],dbp_class_int[3,],sbp_class_int[3,],rwh_class_int[3,]),
+                            rbind(hdl_class_int[4,],ldl_class_int[4,],t_chol_class_int[4,],tri_class_int[4,],hba1c_int[4,],dbp_class_int[4,],sbp_class_int[4,],rwh_class_int[4,]))
+
+colnames(df_class_ints) <- c("type.1.estimate","type.1.lower","type.1.upper","type.1.pvalue","type.2.estimate","type.2.lower","type.2.upper","type.2.pvalue","type.4.estimate","type.4.lower","type.4.upper","type.4.pvalue")
+rownames(df_class_ints) <- c("hdl","ldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio")
 df_class_ints
