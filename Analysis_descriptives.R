@@ -59,6 +59,7 @@ table(base_data$imp_nr)
 sqrt( mean(aggregate(subset(base_data,imp_nr!=0)$age,by=list(subset(base_data,imp_nr!=0)$imp_nr),FUN=var)$x)+sum((aggregate(subset(base_data,imp_nr!=0)$age,by=list(subset(base_data,imp_nr!=0)$imp_nr),FUN=mean)$x-mean(subset(base_data,imp_nr!=0)$age))^2)/19
 )
 
+
 ## gender
 table(base_data$gender, useNA="always")/20
 prop.table(table(base_data$gender)/20)

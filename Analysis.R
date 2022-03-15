@@ -106,6 +106,11 @@ summary(base_data$bmi[base_data$imputation!=0])
 
 base_data_mids <- as.mids(base_data,.imp="imputation")
 
+## BMI kategoriseringer ved baseline
+table(base_data$bmi<25, base_data$selfScoreCat)/21
+table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
+table(base_data$bmi>=30, base_data$selfScoreCat)/21
+
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
 
@@ -242,8 +247,6 @@ m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = 
 summary(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))),confint=T)
 #confint(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
 
-#confint(pool(with(base_data_mids,gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family = BCCG))))
-
 #m_sum <- summary(m)
 plot(m)
 coef(m)
@@ -265,6 +268,14 @@ mod30 <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation), wei
 mod30_p <- (glm.mids((bmi>=30)~(selfScoreCat+age+gender+education+occupation)+sample_weights, weights=sample_weights, data=base_data_mids,family=binomial))
 mod25 <- (glm.mids((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=base_data_mids,family=binomial))
 #>>>>>>> Stashed changes
+
+## test for trend
+TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+testT <- summary(pool(TEST))
+
+TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+test2 <- summary(pool(TEST2), conf.int = T)
+
 
 ## OR for BMI>30
 model30 <- summary(pool(mod30),conf.int = T)
