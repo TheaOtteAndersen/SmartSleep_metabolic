@@ -110,7 +110,7 @@ publish(univariateTable(selfScoreCat ~ occupation,data=base_data, column.percent
 
 ## BMI
 publish(univariateTable(selfScoreCat ~ bmi,data=base_data, column.percent=TRUE))
-
+aggregate(base_data$bmi, by=list(base_data$selfScoreCat), FUN=median, na.rm=T)
 # --------------------------------------------------------------------------- ##
 
 ## Population Sample
