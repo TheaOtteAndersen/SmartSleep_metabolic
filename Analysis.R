@@ -29,12 +29,8 @@ estimate.pooler <- function(coef,sd){
 }
 
 #Reading in the data
-#setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
-#load("H:/SmartSleep backup IT issues/imputation/myImputationCSS-res-00001.RData")
-#CSS0 <- imp_CSS$data
-#CSS0$impnr=0
-#CSS <- read.csv2("Citizen Science Sample/imp_citizenScience.csv")
-#CSS <- rbind(CSS0,CSS)
+setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
+
 
 ## load tracking data 
 subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
@@ -96,7 +92,6 @@ base_data$bmi[base_data$bmi==0]<-NA
 summary(base_data$bmi[base_data$imputation!=0])
 
 base_data_mids <- as.mids(base_data,.imp="imputation")
-
 
 ## BMI kategoriseringer ved baseline
 table(base_data$bmi<25, base_data$selfScoreCat)/21
@@ -427,7 +422,9 @@ for (k in 6:(length(m$mu.coefficients))){
 
 
 
-
+# --------------------------------------------------------------------------- ##
+## cross-sectional associations between risk profiles and bmi (25, 30 & continous)
+# --------------------------------------------------------------------------- ##
 
 
 ## Using the mice package with mids objects
@@ -436,7 +433,7 @@ mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+oc
 
 ## test for trend
 TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-testT <- summary(pool(TEST))
+testT <- summary(pool(TEST), conf.int = T)
 
 TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 test2 <- summary(pool(TEST2), conf.int = T)
@@ -455,6 +452,7 @@ exp(model25$`2.5 %`)
 exp(model25$`97.5 %`)
 
 # --------------------------------------------------------------------------- ##
+## longitudinal analysis of risk scores of smartphone behavior and changes in BMI
 # --------------------------------------------------------------------------- ##
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
@@ -981,11 +979,6 @@ m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+
 summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),
                                         nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
-## 95% CI (ikke kørt endnu)
-confint(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),
-                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
-
-
 ## no adjustment for clusters
 summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+gender+education+occupation),
                                         nu.formula = ~ (selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
@@ -1229,10 +1222,15 @@ clinical_sample$selfScoreCat[clinical_sample$selfScore>=10]="3"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
 table(clinical_sample$selfScoreCat, useNA="always")
 
+## BMI clinical
+table(clinical_sample$bmi.clinical)
+clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
+publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+
 ## descriptives of clinical sample
 publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))
 
-publish(univariateTable(selfScoreCat ~ bmi,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
 
