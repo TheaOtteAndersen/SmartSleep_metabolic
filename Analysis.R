@@ -952,8 +952,6 @@ for (k in 9:(length(m$mu.coefficients))){
 #The resulting plots should be quadratically shaped around the MLE, if we would like to use the Wald approximation.
 
 
-
-
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
 
@@ -965,7 +963,6 @@ ggplot(pop_track, aes(x = factor(selfScoreCat))) +
   geom_bar()
 ggplot(pop_track, aes(x = factor(cluster))) +
   geom_bar()
-
 
 #analyses
 
@@ -1191,6 +1188,10 @@ modelRandom30Risk <- summary(pool(Random30Risk), conf.int = T)
 exp(modelRandom30Risk$estimate)
 exp(modelRandom30Risk$`2.5 %`)
 exp(modelRandom30Risk$`97.5 %`)
+
+## test for trend (selfScoreCat numeric)
+Random30Risk <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+
 
 ###############################################################################
 ###############################################################################
