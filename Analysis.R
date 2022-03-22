@@ -221,6 +221,10 @@ pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
+
+# --------------------------------------------------------------------------- #
+boot_path <- "S:/SUND-IFSV-SmartSleep/Christoffer/gamlssBootstrap/"
+
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
 #Looking at general patterns
@@ -273,153 +277,25 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 
+#Confidence intervals:
 
-#Checking the validity of Wald intervals
+#Reading in server simulations
+boot <- rep(NA,17)
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesBase"]){
+  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[,-1]
 
-coef <- sds <- matrix(nrow=length(c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)),ncol=20)
-for (i in 1:20){
-  m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-  coef[,i] <- c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)
-  sds[,i] <- sqrt(diag(vcov(m)))
+
+#Putting into confidence intervals
+
+CIs_base <- data.frame("Estimate"=rep(NA,17),"Lower"=rep(NA,17),"Upper"=rep(NA,17))
+for (i in 1:nrow(boot)){
+  CIs_base[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
 }
 
-ests <- estimate.pooler(coef,sds)[,1]
-
-logL1 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG))
-logL2 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==2)),family = BCCG))
-logL3 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==3)),family = BCCG))
-logL4 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==4)),family = BCCG))
-logL5 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==5)),family = BCCG))
-logL6 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==6)),family = BCCG))
-logL7 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==7)),family = BCCG))
-logL8 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==8)),family = BCCG))
-logL9 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==9)),family = BCCG))
-logL10 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==10)),family = BCCG))
-logL11 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==11)),family = BCCG))
-logL12 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==12)),family = BCCG))
-logL13 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==13)),family = BCCG))
-logL14 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==14)),family = BCCG))
-logL15 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==15)),family = BCCG))
-logL16 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==16)),family = BCCG))
-logL17 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==17)),family = BCCG))
-logL18 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==18)),family = BCCG))
-logL19 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==19)),family = BCCG))
-logL20 <- gen.likelihood(gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==20)),family = BCCG))
-
-
-logLhat <- (logL1(ests)+logL2(ests)+logL3(ests)+logL4(ests)+logL5(ests)+
-  logL6(ests)+logL7(ests)+logL8(ests)+logL9(ests)+logL10(ests)+
-  logL11(ests)+logL12(ests)+logL13(ests)+logL14(ests)+logL15(ests)+
-  logL16(ests)+logL17(ests)+logL18(ests)+logL19(ests)+logL20(ests))/20
-
-#Would ideally put the pooled estimates in here, and use them for generating profile likelihood intervals in the AVERAGE likelihood function across the imputations... Hence we would need to also generate that function by generating each of the likelihoods and making the average of the 20 likelihoods evaluated in given parameters.
-#hatmucoefs <- c() #This should then contain the pooled estimates to put into the 20 likelihoods.
-
-change_seq <- change_seq1 <- seq(from=-2.5,to=2.5,by=0.01)
-change_seq2 <- seq(from=-0.1,to=0.1,by=0.0001)
-out_seq <- numeric(0)
-out_ints <- matrix(0,nrow=length(m$mu.coefficients),ncol=2)
-
-for (k in 1:4){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)]))))) #c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-out_seq <- numeric(0)
-k=5
-for (i in 1:(length(change_seq2))){ #*(k==1)+length(change_seq2)*(k>1)
-  #if (k==1){
-  out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])))))
-  #}
-  #if (k>1){
-  #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-  #}
-}
-out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-plot(m$mu.coefficients[k]+change_seq2,out_seq)
-
-out_seq <- numeric(0)
-for (k in 6:(length(m$mu.coefficients))){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-#The resulting plots should be quadratically shaped around the MLE, if we would like to use the Wald approximation.
-#The profile likelihood intervals seem quite narrow...
-
+CIs_base[,1] <- rowMeans(boot)
+rownames(CIs_base) <- names(coef(m))
 
 
 # --------------------------------------------------------------------------- ##
@@ -587,159 +463,27 @@ prof.term(model=m,criterion="GD",min=-35,max=25,step=1)$CI #Doesn't seem to work
 
 #Manual comparison of likelihood based confidence intervals and wald type intervals
 
+#Confidence intervals:
 
-coef <- sds <- matrix(nrow=length(c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)),ncol=20)
-for (i in 1:20){
-  m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time,
-              nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==i)),family=BCCG,method=RS(100),robust=T) #(selfScoreCat+age+gender+education+occupation)*time
-  
-  coef[,i] <- c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)
-  sds[,i] <- sqrt(diag(vcov(m)))
+#Reading in server simulations
+boot <- rep(NA,34)
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesLong"]){
+  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[,-1]
+
+
+#Putting into confidence intervals
+
+CIs_long <- data.frame("Estimate"=rep(NA,34),"Lower"=rep(NA,34),"Upper"=rep(NA,34))
+for (i in 1:nrow(boot)){
+  CIs_long[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
 }
 
-ests <- estimate.pooler(coef,sds)[,1]
+CIs_long[,1] <- rowMeans(boot)
+rownames(CIs_long) <- names(coef(m))
 
-logL1 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==1)),family=BCCG,method=RS(100)))
-logL2 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==2)),family=BCCG,method=RS(100)))
-logL3 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==3)),family=BCCG,method=RS(100)))
-logL4 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==4)),family=BCCG,method=RS(100)))
-logL5 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==5)),family=BCCG,method=RS(100)))
-logL6 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==6)),family=BCCG,method=RS(100)))
-logL7 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==7)),family=BCCG,method=RS(100)))
-logL8 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==8)),family=BCCG,method=RS(100)))
-logL9 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==9)),family=BCCG,method=RS(100)))
-logL10 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG,method=RS(100)))
-logL11 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==11)),family=BCCG,method=RS(100)))
-logL12 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==12)),family=BCCG,method=RS(100)))
-logL13 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==13)),family=BCCG,method=RS(100)))
-logL14 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==14)),family=BCCG,method=RS(100)))
-logL15 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==15)),family=BCCG,method=RS(100)))
-logL16 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==16)),family=BCCG,method=RS(100)))
-logL17 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==17)),family=BCCG,method=RS(100)))
-logL18 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==18)),family=BCCG,method=RS(100)))
-logL19 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==19)),family=BCCG,method=RS(100)))
-logL20 <- gen.likelihood(gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time, nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==20)),family=BCCG,method=RS(100)))
-
-
-logLhat <- (logL1(ests)+logL2(ests)+logL3(ests)+logL4(ests)+logL5(ests)+
-              logL6(ests)+logL7(ests)+logL8(ests)+logL9(ests)+logL10(ests)+
-              logL11(ests)+logL12(ests)+logL13(ests)+logL14(ests)+logL15(ests)+
-              logL16(ests)+logL17(ests)+logL18(ests)+logL19(ests)+logL20(ests))/20
-
-#Would ideally put the pooled estimates in here, and use them for generating profile likelihood intervals in the AVERAGE likelihood function across the imputations... Hence we would need to also generate that function by generating each of the likelihoods and making the average of the 20 likelihoods evaluated in given parameters.
-#hatmucoefs <- c() #This should then contain the pooled estimates to put into the 20 likelihoods.
-
-change_seq <- change_seq1 <- seq(from=-2.5,to=2.5,by=0.01)
-change_seq2 <- seq(from=-0.1,to=0.1,by=0.0001)
-out_seq <- numeric(0)
-out_ints <- matrix(0,nrow=length(m$mu.coefficients),ncol=2)
-
-
-for (k in 1:4){
-for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-#if (k==1){
-  out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-  #}
-#if (k>1){
-#out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-#}
-}
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-
-out_seq <- numeric(0)
-k=5
-for (i in 1:(length(change_seq2))){ #*(k==1)+length(change_seq2)*(k>1)
-  out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])))))
-  #}
-  #if (k>1){
-  #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq22[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-  #}
-}
-out_ints[k,] <- c(ests[k]+min(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]))
-plot(m$mu.coefficients[k]+change_seq2,out_seq)
-
-
-out_seq <- numeric(0)
-for (k in 6:(length(m$mu.coefficients))){
-  for (i in 1:(length(change_seq2))){ #*(k==1)+length(change_seq2)*(k>1)
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq22[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq2,out_seq)
-}
-
-
-#Comparison in intervals
-cbind(out_ints,conf.res,coef(m))
-
-#Conclusion in this case: The likelihood based intervals are very narrow... Is something wrong with the implementation?
-#If the implementation can be trusted the Wald type confidence intervals are very conservative.
-
-#The plots are quite nicely quadratic in their shapes. Hence the Wald approximation is good and there must be an issue with the implementation above.
+#
 
 #Generally:
 #Wald intervals with Robust=T are better for misspecified models.
@@ -808,148 +552,25 @@ logL <- gen.likelihood(m)
 logLhat <- logL()
 
 
-coef <- sds <- matrix(nrow=length(c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)),ncol=20)
-for (i in 1:20){
-  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)),family=BCCG,method=RS(100))
-  
-  coef[,i] <- c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)
-  sds[,i] <- sqrt(diag(vcov(m)))
+#Confidence intervals:
+
+#Reading in server simulations
+boot <- rep(NA,20)
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesCSStrack"]){
+  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[,-1]
+
+
+#Putting into confidence intervals
+
+CIs_CSStrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
+for (i in 1:nrow(boot)){
+  CIs_CSStrack[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
 }
 
-ests <- estimate.pooler(coef,sds)[,1]
-
-logL1 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==1)),family=BCCG,method=RS(100)))
-logL2 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==2)),family=BCCG,method=RS(100)))
-logL3 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==3)),family=BCCG,method=RS(100)))
-logL4 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==4)),family=BCCG,method=RS(100)))
-logL5 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==5)),family=BCCG,method=RS(100)))
-logL6 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==6)),family=BCCG,method=RS(100)))
-logL7 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==7)),family=BCCG,method=RS(100)))
-logL8 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==8)),family=BCCG,method=RS(100)))
-logL9 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==9)),family=BCCG,method=RS(100)))
-logL10 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100)))
-logL11 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==11)),family=BCCG,method=RS(100)))
-logL12 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==12)),family=BCCG,method=RS(100)))
-logL13 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==13)),family=BCCG,method=RS(100)))
-logL14 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==14)),family=BCCG,method=RS(100)))
-logL15 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==15)),family=BCCG,method=RS(100)))
-logL16 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==16)),family=BCCG,method=RS(100)))
-logL17 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==17)),family=BCCG,method=RS(100)))
-logL18 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==18)),family=BCCG,method=RS(100)))
-logL19 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==19)),family=BCCG,method=RS(100)))
-logL20 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==20)),family=BCCG,method=RS(100)))
-
-
-logLhat <- (logL1(ests)+logL2(ests)+logL3(ests)+logL4(ests)+logL5(ests)+
-              logL6(ests)+logL7(ests)+logL8(ests)+logL9(ests)+logL10(ests)+
-              logL11(ests)+logL12(ests)+logL13(ests)+logL14(ests)+logL15(ests)+
-              logL16(ests)+logL17(ests)+logL18(ests)+logL19(ests)+logL20(ests))/20
-
-change_seq <- change_seq1 <- seq(from=-2.5,to=2.5,by=0.01)
-change_seq2 <- seq(from=-0.1,to=0.1,by=0.0001)
-out_seq <- numeric(0)
-
-out_ints <- matrix(0,nrow=length(m$mu.coefficients),ncol=2)
-
-for (k in 1:7){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-out_seq <- numeric(0)
-k=8
-for (i in 1:(length(change_seq2))){ #*(k==1)+length(change_seq2)*(k>1)
-  #if (k==1){
-  out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])))))
-  #}
-  #if (k>1){
-  #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq22[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-  #}
-}
-out_ints[k,] <- c(ests[k]+min(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]))
-plot(m$mu.coefficients[k]+change_seq2,out_seq)
-
-out_seq <- numeric(0)
-for (k in 9:(length(m$mu.coefficients))){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-#The resulting plots should be quadratically shaped around the MLE, if we would like to use the Wald approximation.
+CIs_CSStrack[,1] <- rowMeans(boot)
+rownames(CIs_CSStrack) <- names(coef(m))
 
 
 # --------------------------------------------------------------------------- ##
@@ -969,21 +590,21 @@ ggplot(pop_track, aes(x = factor(cluster))) +
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
 ## bmi kontinuert 
 
-m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),
+            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
 ## no adjustment for risk profiles
-summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),
-                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation),
+                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 ## no adjustment for clusters
-summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+gender+education+occupation),
-                                        nu.formula = ~ (selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+Gender+education+occupation),
+                                        nu.formula = ~ (selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 
 ## mutually adjusting for clusters/risk profiles
-summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),
+                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 #Checking validity of Wald yet again
 
@@ -991,149 +612,24 @@ logL <- gen.likelihood(m)
 
 
 
-coef <- sds <- matrix(nrow=length(c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)),ncol=20)
-for (i in 1:20){
-  m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),
-              nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==i)),family=BCCG,method=RS(100))
-  
-  coef[,i] <- c(m$mu.coefficients,m$sigma.coefficients,m$nu.coefficients)
-  sds[,i] <- sqrt(diag(vcov(m)))
+#Confidence intervals:
+
+boot <- rep(NA,20)
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesPopTrack"]){
+  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[,-1]
+
+
+#Putting into confidence intervals
+
+CIs_PopTrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
+for (i in 1:nrow(boot)){
+  CIs_PopTrack[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
 }
 
-ests <- estimate.pooler(coef,sds)[,1]
-
-logL1 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==1)),family=BCCG,method=RS(100)))
-logL2 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==2)),family=BCCG,method=RS(100)))
-logL3 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==3)),family=BCCG,method=RS(100)))
-logL4 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==4)),family=BCCG,method=RS(100)))
-logL5 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==5)),family=BCCG,method=RS(100)))
-logL6 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==6)),family=BCCG,method=RS(100)))
-logL7 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==7)),family=BCCG,method=RS(100)))
-logL8 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==8)),family=BCCG,method=RS(100)))
-logL9 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==9)),family=BCCG,method=RS(100)))
-logL10 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100)))
-logL11 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==11)),family=BCCG,method=RS(100)))
-logL12 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==12)),family=BCCG,method=RS(100)))
-logL13 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==13)),family=BCCG,method=RS(100)))
-logL14 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==14)),family=BCCG,method=RS(100)))
-logL15 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==15)),family=BCCG,method=RS(100)))
-logL16 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==16)),family=BCCG,method=RS(100)))
-logL17 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==17)),family=BCCG,method=RS(100)))
-logL18 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==18)),family=BCCG,method=RS(100)))
-logL19 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==19)),family=BCCG,method=RS(100)))
-logL20 <- gen.likelihood(gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==20)),family=BCCG,method=RS(100)))
-
-
-logLhat <- (logL1(ests)+logL2(ests)+logL3(ests)+logL4(ests)+logL5(ests)+
-              logL6(ests)+logL7(ests)+logL8(ests)+logL9(ests)+logL10(ests)+
-              logL11(ests)+logL12(ests)+logL13(ests)+logL14(ests)+logL15(ests)+
-              logL16(ests)+logL17(ests)+logL18(ests)+logL19(ests)+logL20(ests))/20
-
-logLhat <- logL()
-change_seq <- change_seq1 <- seq(from=-2.5,to=2.5,by=0.01)
-change_seq2 <- seq(from=-0.1,to=0.1,by=0.0001)
-out_seq <- numeric(0)
-
-out_ints <- matrix(0,nrow=length(m$mu.coefficients),ncol=2)
-
-for (k in 1:7){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-out_seq <- numeric(0)
-k=8
-for (i in 1:(length(change_seq2))){ #*(k==1)+length(change_seq2)*(k>1)
-  #if (k==1){
-  out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL2(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL3(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL4(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL5(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL6(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL7(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL8(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL9(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL10(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL11(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL12(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL13(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL14(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL15(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL16(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL17(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL18(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL19(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])),
-                                     logL20(c(ests[0:(k-1)],ests[k]+change_seq2[i],ests[(k+1):length(ests)])))))
-  #}
-  #if (k>1){
-  #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq22[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-  #}
-}
-out_ints[k,] <- c(ests[k]+min(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq2[which(out_seq<=qchisq(p=0.95,df=1))]))
-plot(m$mu.coefficients[k]+change_seq2,out_seq)
-
-out_seq <- numeric(0)
-for (k in 9:(length(m$mu.coefficients))){
-  for (i in 1:(length(change_seq))){ #*(k==1)+length(change_seq2)*(k>1)
-    #if (k==1){
-    out_seq[i] <- -2*(logLhat - mean(c(logL1(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL2(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL3(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL4(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL5(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL6(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL7(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL8(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL9(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL10(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL11(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL12(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL13(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL14(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL15(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL16(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL17(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL18(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL19(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])),
-                                       logL20(c(ests[0:(k-1)],ests[k]+change_seq[i],ests[(k+1):length(ests)])))))
-    #}
-    #if (k>1){
-    #out_seq[i] <- abs(logLhat - logL(c(m$mu.coefficients[0:(k-1)],m$mu.coefficients[k]+change_seq2[i],m$mu.coefficients[(k+1):length(m$mu.coefficients)],m$sigma.coefficients,m$nu.coefficients)))
-    #}
-  }
-  out_ints[k,] <- c(ests[k]+min(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]),ests[k]+max(change_seq[which(out_seq<=qchisq(p=0.95,df=1))]))
-  plot(m$mu.coefficients[k]+change_seq,out_seq)
-}
-
-#The resulting plots should be quadratically shaped around the MLE, if we would like to use the Wald approximation. 
+CIs_PopTrack[,1] <- rowMeans(boot)
+rownames(CIs_PopTrack) <- names(coef(m))
 
 
 
@@ -1483,7 +979,7 @@ glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluste
 hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
 hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
 ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_int <- summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
+t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
 sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
 tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
 vldl_int <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
