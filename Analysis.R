@@ -297,6 +297,8 @@ for (i in 1:nrow(boot)){
 CIs_base[,1] <- rowMeans(boot)
 rownames(CIs_base) <- names(coef(m))
 
+#This is not correct. Variance is underestimated. Use instead the Boot MI or MI Boot procedure from Schomaker and Heumann (2018).
+
 
 # --------------------------------------------------------------------------- ##
 ## cross-sectional associations between risk profiles and bmi (25, 30 & continous)
