@@ -285,15 +285,22 @@ for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesBa
 boot <- boot[,-1]
 
 
-#Putting into confidence intervals
+#Putting into confidence intervals - beware of N_imp and think about both MI Boot and MI Boot (PS). Both can be done from the samples below.
+#Boot MI gives symmetric intervals which may be narrower (still with coverage when appropriate.
+#Boot MI (PS) gives room for non-symmetric intervals.
+#They are probably close when sample size, B, and M are large enough.
 
 CIs_base <- data.frame("Estimate"=rep(NA,17),"Lower"=rep(NA,17),"Upper"=rep(NA,17))
 for (i in 1:nrow(boot)){
-  CIs_base[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
+  CIs_base[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
 }
 
 CIs_base[,1] <- rowMeans(boot)
 rownames(CIs_base) <- names(coef(m))
+
+#This is not correct. Variance is underestimated. Use instead the Boot MI or MI Boot or MI Boot PI procedure from Schomaker and Heumann (2018).
+#With the MI Boot PI we just need to remove restriction of same subjects sampled in each imputed data set and then we need to consider estimate on each (b,m) combination
+#data set and use the full list B*M estimates for constructing the overall interval (that is not combining across M imputations for each bootstrap b)!
 
 
 # --------------------------------------------------------------------------- ##
@@ -480,7 +487,7 @@ boot <- boot[,-1]
 
 CIs_long <- data.frame("Estimate"=rep(NA,34),"Lower"=rep(NA,34),"Upper"=rep(NA,34))
 for (i in 1:nrow(boot)){
-  CIs_long[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
+  CIs_long[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
 }
 
 CIs_long[,1] <- rowMeans(boot)
@@ -569,7 +576,7 @@ boot <- boot[,-1]
 
 CIs_CSStrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
 for (i in 1:nrow(boot)){
-  CIs_CSStrack[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
+  CIs_CSStrack[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
 }
 
 CIs_CSStrack[,1] <- rowMeans(boot)
@@ -628,7 +635,7 @@ boot <- boot[,-1]
 
 CIs_PopTrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
 for (i in 1:nrow(boot)){
-  CIs_PopTrack[i,2:3] <- c(sort(boot[i,])[250],sort(boot[i,])[9750])
+  CIs_PopTrack[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
 }
 
 CIs_PopTrack[,1] <- rowMeans(boot)
