@@ -100,6 +100,31 @@ table(base_data$bmi<25, base_data$selfScoreCat)/26
 table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/26
 table(base_data$bmi>=30, base_data$selfScoreCat)/26
 
+table(base_data$bmi<25, base_data$selfScoreCat)/21
+table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
+table(base_data$bmi>=30, base_data$selfScoreCat)/21
+
+#BMI followup difference - match with emailAddress or CS_ID
+#y: base, x: followup
+
+bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
+
+## difference mellem follow-up og baseline
+bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
+mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
+
+bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
+bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
+
+bmi_followup$sample_weights <- bmi_followup$sample_weights.y
+bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
+
+#New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
+
+long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
+                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
+
+long_data_mids <- as.mids(long_data,.imp="imputation")
 
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
@@ -304,7 +329,6 @@ rownames(CIs_base) <- names(coef(m))
 ## cross-sectional associations between risk profiles and bmi (25, 30 & continous)
 # --------------------------------------------------------------------------- ##
 
-
 ## Using the mice package with mids objects
 mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -315,7 +339,6 @@ testT <- summary(pool(TEST), conf.int = T)
 
 TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 test2 <- summary(pool(TEST2), conf.int = T)
-
 
 ## OR for BMI>30
 model30 <- summary(pool(mod30),conf.int = T)
@@ -439,6 +462,11 @@ exp(ModelNewBmi25$estimate)
 exp(ModelNewBmi25$`2.5 %`)
 exp(ModelNewBmi25$`97.5 %`)
 
+## test for trend
+
+test25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ ((as.numeric(selfScoreCat.y))+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+testT25 <- summary(pool(test25), conf.int = T)
+
 ## from below 30 to above 30
 #bmi_followup_mids_30risk <- as.mids(subset(bmi_followup_30risk,bmi.base<30),.imp="imputation")
 bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
@@ -449,6 +477,8 @@ exp(modelnewBmi30$estimate)
 exp(modelnewBmi30$`2.5 %`)
 exp(modelnewBmi30$`97.5 %`)
 
+test30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ ((as.numeric(selfScoreCat.y))+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+testT30 <- summary(pool(test30), conf.int=T)
 
 ## And then the long format for the numeric change:
 
@@ -645,13 +675,24 @@ exp(modelRandom25$estimate)
 exp(modelRandom25$`2.5 %`)
 exp(modelRandom25$`97.5 %`)
 
+# test for trend
+Random25Test <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(cluster2prob+cluster4prob+cluster1prob))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25Test), conf.int=T)
+
+Random25Test2 <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster4prob+cluster1prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25Test2), conf.int=T)
+
 ## no adjustment for selfScoreCat
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster4prob+cluster1prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No <- summary(pool(Random25No), conf.int=T)
 exp(modelRandom25No$estimate)
 exp(modelRandom25No$`2.5 %`)
 exp(modelRandom25No$`97.5 %`)
+
+#test for trend
+Random25NoTest <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(cluster1prob+cluster2prob+cluster4prob))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25NoTest), conf.int=T)
 
 ## BMI >30
 #summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
@@ -661,6 +702,14 @@ exp(modelRandom30$estimate)
 exp(modelRandom30$`2.5 %`)
 exp(modelRandom30$`97.5 %`)
 
+#test for trend
+Random30Test <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(cluster1prob+cluster2prob+cluster4prob))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30Test), conf.int = T)
+
+Random30Test2 <- with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30Test2), conf.int = T)
+
+
 ## no adjustment for selfScoreCat
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster1prob+cluster2prob+cluster4prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -668,6 +717,10 @@ modelRandom30No <- summary(pool(Random30No), conf.int = T)
 exp(modelRandom30No$estimate)
 exp(modelRandom30No$`2.5 %`)
 exp(modelRandom30No$`97.5 %`)
+
+#test for trend
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(cluster1prob+cluster2prob+cluster4prob))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30NoT), conf.int = T)
 
 
 ####### BMI and self-reported risk profiles
@@ -680,6 +733,10 @@ exp(modelRandom25Risk$estimate)
 exp(modelRandom25Risk$`2.5 %`)
 exp(modelRandom25Risk$`97.5 %`)
 
+# test for trend
+Random25RiskT <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25RiskT))
+
 
 ## BMI >30
 #summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
@@ -690,7 +747,8 @@ exp(modelRandom30Risk$`2.5 %`)
 exp(modelRandom30Risk$`97.5 %`)
 
 ## test for trend (selfScoreCat numeric)
-Random30Risk <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30RiskT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30RiskT), conf.int = T)
 
 
 ###############################################################################
