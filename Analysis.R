@@ -141,11 +141,11 @@ ggplot(CSS, aes(x = factor(selfScoreCat))) +
   geom_bar()
 
 ## bmi CSS
-CSS$bmi[CSS$bmi==0] <- NA
-CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
-CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
-CSS$bmi[CSS$height==CSS$weight]<-NA
-summary(CSS$bmi[CSS$impnr!=0])
+#CSS$bmi[CSS$bmi==0] <- NA
+#CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
+#CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
+#CSS$bmi[CSS$height==CSS$weight]<-NA
+#summary(CSS$bmi[CSS$impnr!=0])
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
