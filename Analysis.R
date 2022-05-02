@@ -36,16 +36,16 @@ setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputat
 subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
 
 ## load baseline data
-base_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv"),imputation=imp_nr)
+base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
 
 ## load followup sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 
 ## load population sample
-pop_data <-rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv"),imputation=imp_nr)
+pop_data <-read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv")
 
 ## load clinical data (survey and clinical data)
-clin_data <- rename(read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv"),imputation=impnr)
+clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
 clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
 
 # --------------------------------------------------------------------------- ##
@@ -81,45 +81,24 @@ table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<
 publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
 
 ## bmi for baseline data 
-base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
-base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
-base_data$height[base_data$CS_ID==586] <- 100
-base_data$bmi[base_data$CS_ID==586] <- 48.0
-base_data$bmi[base_data$height==base_data$weight]<-NA
-base_data$bmi[base_data$bmi<14]<-NA
-base_data$bmi[base_data$bmi>147]<-NA
-base_data$bmi[base_data$bmi==0]<-NA
-summary(base_data$bmi[base_data$imputation!=0])
+#base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
+#base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
+#base_data$height[base_data$CS_ID==586] <- 100
+#base_data$bmi[base_data$CS_ID==586] <- 48.0
+#base_data$bmi[base_data$height==base_data$weight]<-NA
+#base_data$bmi[base_data$bmi<14]<-NA
+#base_data$bmi[base_data$bmi>147]<-NA
+#base_data$bmi[base_data$bmi==0]<-NA
+#summary(base_data$bmi[base_data$imputation!=0])
+
+#save(base_data,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/base_data.RData")
 
 base_data_mids <- as.mids(base_data,.imp="imputation")
 
 ## BMI kategoriseringer ved baseline
-table(base_data$bmi<25, base_data$selfScoreCat)/21
-table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
-table(base_data$bmi>=30, base_data$selfScoreCat)/21
-
-#BMI followup difference - match with emailAddress or CS_ID
-#y: base, x: followup
-
-bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
-
-## difference mellem follow-up og baseline
-bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
-mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
-
-bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
-bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
-
-bmi_followup$sample_weights <- bmi_followup$sample_weights.y
-bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
-
-#New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
-
-long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
-                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
-
-long_data_mids <- as.mids(long_data,.imp="imputation")
-
+table(base_data$bmi<25, base_data$selfScoreCat)/26
+table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/26
+table(base_data$bmi>=30, base_data$selfScoreCat)/26
 
 
 # --------------------------------------------------------------------------- ##
@@ -143,16 +122,18 @@ ggplot(CSS, aes(x = factor(selfScoreCat))) +
   geom_bar()
 
 ## bmi CSS
-CSS$bmi[CSS$bmi==0] <- NA
-CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
-CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
-CSS$bmi[CSS$height==CSS$weight]<-NA
-summary(CSS$bmi[CSS$impnr!=0])
+#CSS$bmi[CSS$bmi==0] <- NA
+#CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
+#CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
+#CSS$bmi[CSS$height==CSS$weight]<-NA
+#summary(CSS$bmi[CSS$impnr!=0])
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
 CSS_track <- rename(CSS_track,imputation=impnr)
 CSS_track$sample_weights <- as.numeric(CSS_track$sample_weights)
+
+#save(CSS_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/CSS_track.RData")
 
 CSS_track_mids<-as.mids(CSS_track,.imp="imputation",.id="userid")
 
@@ -163,7 +144,7 @@ CSS_track_mids<-as.mids(CSS_track,.imp="imputation",.id="userid")
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
 
-bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
+bmi_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
 
 ## difference mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
@@ -181,12 +162,17 @@ bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.fu>=30)>(bmi_followup
 bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_followup$bmi.base>=30))
 
 bmi_followup$sample_weights <- bmi_followup$sample_weights.y
+bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$responseDate.x,7,10),"-",substr(bmi_followup$responseDate.x,4,5),"-",substr(bmi_followup$responseDate.x,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
+
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
 long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
-                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
+                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"followup"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),
+                        "imputation"=bmi_followup$imputation,"time" = c(rep(0,length(bmi_followup$bmi.base)),bmi_followup$followup_time))
+
+#save(long_data,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/long_bmi.RData")
 
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
@@ -196,12 +182,12 @@ long_data_mids <- as.mids(long_data,.imp="imputation")
 #Population sample
 
 ## bmi
-pop_data$bmi[pop_data$bmi==0] <- NA
-pop_data$bmi[pop_data$height<100 & pop_data$imputation!=0] <- (pop_data$weight/(((pop_data$height+100)/100)^2))[pop_data$height<100  & pop_data$imputation!=0]
-pop_data$height[pop_data$height<100 & pop_data$imputation!=0] <- pop_data$height[pop_data$height<100 & pop_data$imputation!=0]+100 
-pop_data$bmi[pop_data$height==pop_data$weight]<-NA
-pop_data$bmi[pop_data$bmi<14]<-NA
-summary(pop_data$bmi[pop_data$imputation!=0])
+#pop_data$bmi[pop_data$bmi==0] <- NA
+#pop_data$bmi[pop_data$height<100 & pop_data$imputation!=0] <- (pop_data$weight/(((pop_data$height+100)/100)^2))[pop_data$height<100  & pop_data$imputation!=0]
+#pop_data$height[pop_data$height<100 & pop_data$imputation!=0] <- pop_data$height[pop_data$height<100 & pop_data$imputation!=0]+100 
+#pop_data$bmi[pop_data$height==pop_data$weight]<-NA
+#pop_data$bmi[pop_data$bmi<14]<-NA
+#summary(pop_data$bmi[pop_data$imputation!=0])
 
 ## risk profiles for population sample
 pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
@@ -219,7 +205,16 @@ table(pop_data$selfScoreCat[pop_data$imputation!=0])
 ## merge tracking and survey data for population sample
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
+
+#save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
+
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
+
+#### -------------------------------- ####
+
+#### Write out data files for gamlss bootstrap
+
+#### -------------------------------- ####
 
 
 # --------------------------------------------------------------------------- #
@@ -273,11 +268,11 @@ hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sa
 hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
 
 
-#Better alternative: Pretty good fit. A generalized family of models.
+#Better alternative: Pretty good fit. A general family of models.
 
 m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 
-#Confidence intervals:
+#Confidence intervals and estimates:
 
 #Reading in server simulations
 boot <- rep(NA,17)
@@ -374,6 +369,8 @@ hist(residuals(lm(bmi.fu~(bmi.base+selfScoreCat.y+age.y+gender.y+education.y+occ
 
 #Differences for indicators also (3 models per threshold: change, change from low to high group, and change from high to low group)
 
+#justér for followup-tid (interaktion mellem risk profile og tiden)
+
 summary(glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 summary(glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
@@ -434,9 +431,9 @@ summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupat
 
 ## from below 25 to above 25
 bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25),.imp="imputation")
-summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))), conf.int = T)
+summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))), conf.int = T)
 
-NewBmi25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+NewBmi25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))
 ModelNewBmi25 <- summary(pool(NewBmi25), conf.int = T)
 exp(ModelNewBmi25$estimate)
 exp(ModelNewBmi25$`2.5 %`)
@@ -446,7 +443,7 @@ exp(ModelNewBmi25$`97.5 %`)
 #bmi_followup_mids_30risk <- as.mids(subset(bmi_followup_30risk,bmi.base<30),.imp="imputation")
 bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
 #summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))), conf.int = T)
-newBmi30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+newBmi30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))
 modelnewBmi30 <- summary(pool(newBmi30), conf.int = T)
 exp(modelnewBmi30$estimate)
 exp(modelnewBmi30$`2.5 %`)
