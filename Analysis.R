@@ -261,21 +261,17 @@ hist(base_data$weight,breaks=40)
 
 #### BASE POPULATION
 
-#Base BMI models (test til om modellen kører)
-
-summary(glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0),family=binomial))
-summary(glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0),family=binomial))
-summary(lm(log(log(bmi))~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0)))
-
 ## test kontinuert bmi
-plot(fitted(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))))
-hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0))),xlim=c(-20,20),breaks=200)
-hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation!=0)))$sim_1,breaks=40) #The bell-shape is not that well suited
+plot(fitted(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))))
+hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),xlim=c(-20,20),breaks=200)
+hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1)))$sim_1,breaks=40) #The bell-shape is not that well suited
+
+#Conclusion: The lm is not by itself appropriate for describing the distribution of BMI.
 
 
 #Alternative: Pretty good fit. A general family of models.
 
-m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
+#m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 
 #Confidence intervals and estimates:
 
@@ -292,6 +288,8 @@ boot <- boot[-1,]
 #Boot MI (PS) gives room for non-symmetric intervals.
 #They are probably close when sample size, B, and M are large enough.
 
+#We use  MI Boot PI in these calculations of confidence intervals and estimates:
+
 CIs_base <- data.frame("Estimate"=rep(NA,17),"Lower"=rep(NA,17),"Upper"=rep(NA,17))
 for (i in 1:nrow(boot)){
   CIs_base[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
@@ -302,10 +300,6 @@ CIs_base[,1] <- colMeans(boot)
 m <- lm(bmi ~ selfScoreCat+age+gender+education+occupation, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)))
 
 rownames(CIs_base) <- names(coef(m))
-
-#This is not correct. Variance is underestimated. Use instead the Boot MI or MI Boot or MI Boot PI procedure from Schomaker and Heumann (2018).
-#With the MI Boot PI we just need to remove restriction of same subjects sampled in each imputed data set and then we need to consider estimate on each (b,m) combination
-#data set and use the full list B*M estimates for constructing the overall interval (that is not combining across M imputations for each bootstrap b)!
 
 
 # --------------------------------------------------------------------------- ##
