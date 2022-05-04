@@ -165,15 +165,15 @@ bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.fu>=30)>(bmi_followup
 bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_followup$bmi.base>=30))
 
 bmi_followup$sample_weights <- bmi_followup$sample_weights.y
-bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$responseDate.x,7,10),"-",substr(bmi_followup$responseDate.x,4,5),"-",substr(bmi_followup$responseDate.x,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
+bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
 
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
-long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
-                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"followup"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),
-                        "imputation"=bmi_followup$imputation,"time" = c(rep(0,length(bmi_followup$bmi.base)),bmi_followup$followup_time))
+long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=rep(bmi_followup$userid,2),"sample_weights"=rep(bmi_followup$sample_weights.x,2),"gender"=rep(bmi_followup$gender.y,2),"age"=rep(bmi_followup$age.y,2),
+                        education=rep(bmi_followup$education.y,2),occupation=rep(bmi_followup$occupation.y,2),selfScoreCat = rep(bmi_followup$selfScoreCat.y,2),"followup"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),
+                        "imputation"=rep(bmi_followup$imputation,2),"time" = c(rep(0,length(bmi_followup$bmi.base)),bmi_followup$followup_time))
 
 #save(long_data,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/long_bmi.RData")
 
@@ -383,92 +383,44 @@ summary(glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupatio
 summary(glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
 
-#Using the mids object
-## change bmi 25
-#summary(pool(with(bmi_followup_mids,glm(bmi25change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-#summary(pool(with(bmi_followup_mids,glm(bmi30change ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
 
-## change from low to high group (korrekte!)
-#bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25),.imp="imputation")
-#summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-
-#bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
-#summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-
-#change from high to low group
-#bmi_followup_mids_25case <- as.mids(subset(bmi_followup,bmi.base>=25),.imp="imputation")
-#summary(pool(with(bmi_followup_mids_25case,glm(bmi25changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-#bmi_followup_mids_30case <- as.mids(subset(bmi_followup,bmi.base>=30),.imp="imputation")
-#summary(pool(with(bmi_followup_mids_30case,glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-
-#Alternative (better?) formulation with more easily interpretable parameters
-#summary(glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
-#summary(glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights, data=bmi_followup,family=binomial))
-
-#And with the mids object class
- ## change 25 
-#change25 <- with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
-#modelchange25 <- summary(pool(change25), conf.int = T)
-#exp(modelchange25$estimate)
-#exp(modelchange25$`2.5 %`)
-#exp(modelchange25$`97.5 %`)
-##summary(pool(with(bmi_followup_mids,glm((bmi.fu>=25) ~ (basebmi25+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))))
-
-##change 30
-#change30 <- with(bmi_followup_mids,glm((bmi.fu>=30) ~ (basebmi30+selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))
-#modelchange30 <- summary(pool(change30), conf.int = T)
-#exp(modelchange30$estimate)
-#exp(modelchange30$`2.5 %`)
-#exp(modelchange30$`97.5 %`)
 
 
 ## ----- ##
 #Final change analyses (per Naja's requests)
 ## ----- ##
 
-## change from low to high group for the subjects at risk
-#bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25 & !is.na(sample_weights)),.imp="imputation")
-#summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-#bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30 & !is.na(sample_weights)),.imp="imputation")
-#summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights,family=binomial))), conf.int = T)
-
 ## from below 25 to above 25
-bmi_followup_mids_25risk <- as.mids(subset(bmi_followup,bmi.base<25),.imp="imputation")
-summary(pool(with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))), conf.int = T)
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
-NewBmi25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))
-ModelNewBmi25 <- summary(pool(NewBmi25), conf.int = T)
-exp(ModelNewBmi25$estimate)
-exp(ModelNewBmi25$`2.5 %`)
-exp(ModelNewBmi25$`97.5 %`)
 
 ## test for trend
 
-test25 <- with(bmi_followup_mids_25risk,glm(bmi25changeUp ~ ((as.numeric(selfScoreCat.y))+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25 <- summary(pool(test25), conf.int = T)
+anova(test25,model25)
+
 
 ## from below 30 to above 30
-#bmi_followup_mids_30risk <- as.mids(subset(bmi_followup_30risk,bmi.base<30),.imp="imputation")
-bmi_followup_mids_30risk <- as.mids(subset(bmi_followup,bmi.base<30),.imp="imputation")
-#summary(pool(with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))), conf.int = T)
-newBmi30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))
-modelnewBmi30 <- summary(pool(newBmi30), conf.int = T)
-exp(modelnewBmi30$estimate)
-exp(modelnewBmi30$`2.5 %`)
-exp(modelnewBmi30$`97.5 %`)
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
 
-test30 <- with(bmi_followup_mids,glm(bmi30changeUp ~ ((as.numeric(selfScoreCat.y))+age.y+gender.y+education.y+occupation.y), weights=sample_weights.y,family=binomial))
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+followup_time)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 testT30 <- summary(pool(test30), conf.int=T)
+anova(test30,model30)
+
 
 ## And then the long format for the numeric change:
 
 #long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
 #                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
 
-long_data_mids <- as.mids(long_data[!is.na(long_data$sample_weights),],.imp="imputation")
+long_data_mids <- as.mids(long_data,.imp="imputation")
 
 lmodel <- lm(bmi~(selfScoreCat+age+gender+education+occupation)*time, data=na.omit(subset(long_data,imputation==10))) #(selfScoreCat+age+gender+education+occupation)*time
-summary(pool(with(,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))), conf.int = T)
 
 
 m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time,
