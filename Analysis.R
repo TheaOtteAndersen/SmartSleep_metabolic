@@ -104,27 +104,6 @@ table(base_data$bmi<25, base_data$selfScoreCat)/21
 table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
 table(base_data$bmi>=30, base_data$selfScoreCat)/21
 
-#BMI followup difference - match with emailAddress or CS_ID
-#y: base, x: followup
-
-bmi_followup <- rename(inner_join(rename(CSS,imputation=impnr),base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
-
-## difference mellem follow-up og baseline
-bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
-mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
-
-bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
-bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
-
-bmi_followup$sample_weights <- bmi_followup$sample_weights.y
-bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
-
-#New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
-
-long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
-                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
-
-long_data_mids <- as.mids(long_data,.imp="imputation")
 
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
@@ -155,7 +134,6 @@ ggplot(CSS, aes(x = factor(selfScoreCat))) +
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
-CSS_track <- rename(CSS_track,imputation=impnr)
 CSS_track$sample_weights <- as.numeric(CSS_track$sample_weights)
 
 #save(CSS_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/CSS_track.RData")
@@ -244,6 +222,8 @@ pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
 # --------------------------------------------------------------------------- #
 boot_path <- "S:/SUND-IFSV-SmartSleep/Christoffer/gamlssBootstrap/"
+N_imp <- 25
+M <- 10
 
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
@@ -302,9 +282,9 @@ m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = 
 #Reading in server simulations
 boot <- rep(NA,17)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesBase"]){
-  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
 }
-boot <- boot[,-1]
+boot <- boot[-1,]
 
 
 #Putting into confidence intervals - beware of N_imp and think about both MI Boot and MI Boot (PS). Both can be done from the samples below.
@@ -314,10 +294,10 @@ boot <- boot[,-1]
 
 CIs_base <- data.frame("Estimate"=rep(NA,17),"Lower"=rep(NA,17),"Upper"=rep(NA,17))
 for (i in 1:nrow(boot)){
-  CIs_base[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
+  CIs_base[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
-CIs_base[,1] <- rowMeans(boot)
+CIs_base[,1] <- colMeans(boot)
 rownames(CIs_base) <- names(coef(m))
 
 #This is not correct. Variance is underestimated. Use instead the Boot MI or MI Boot or MI Boot PI procedure from Schomaker and Heumann (2018).
@@ -485,7 +465,11 @@ testT30 <- summary(pool(test30), conf.int=T)
 #long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=bmi_followup$userid,"sample_weights"=bmi_followup$sample_weights.y,"gender"=bmi_followup$gender.y,"age"=bmi_followup$age.y,
 #                        education=bmi_followup$education.y,occupation=bmi_followup$occupation.y,selfScoreCat = bmi_followup$selfScoreCat.y,"time"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),"imputation"=bmi_followup$imputation)
 
-#long_data_mids <- as.mids(long_data[!is.na(long_data$sample_weights),],.imp="imputation")
+long_data_mids <- as.mids(long_data[!is.na(long_data$sample_weights),],.imp="imputation")
+
+lmodel <- lm(bmi~(selfScoreCat+age+gender+education+occupation)*time, data=na.omit(subset(long_data,imputation==10))) #(selfScoreCat+age+gender+education+occupation)*time
+summary(pool(with(,glm(bmi25changeUp ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+followup_time), weights=sample_weights.y,family=binomial))), conf.int = T)
+
 
 m <- gamlss(bmi~(selfScoreCat+age+gender+education+occupation)*time, sigma.formula = ~ time,
             nu.formula = ~ time,weights=sample_weights, data=na.omit(subset(long_data,imputation==10)),family=BCCG,method=RS(100),robust=T) #(selfScoreCat+age+gender+education+occupation)*time
@@ -502,19 +486,19 @@ prof.term(model=m,criterion="GD",min=-35,max=25,step=1)$CI #Doesn't seem to work
 #Reading in server simulations
 boot <- rep(NA,34)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesLong"]){
-  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
 }
-boot <- boot[,-1]
+boot <- boot[-1,]
 
 
 #Putting into confidence intervals
 
 CIs_long <- data.frame("Estimate"=rep(NA,34),"Lower"=rep(NA,34),"Upper"=rep(NA,34))
-for (i in 1:nrow(boot)){
-  CIs_long[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
+for (i in 1:ncol(boot)){
+  CIs_long[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
-CIs_long[,1] <- rowMeans(boot)
+CIs_long[,1] <- colMeans(boot)
 rownames(CIs_long) <- names(coef(m))
 
 #
@@ -591,19 +575,19 @@ logLhat <- logL()
 #Reading in server simulations
 boot <- rep(NA,20)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesCSStrack"]){
-  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
 }
-boot <- boot[,-1]
+boot <- boot[-1,]
 
 
 #Putting into confidence intervals
 
 CIs_CSStrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
 for (i in 1:nrow(boot)){
-  CIs_CSStrack[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
+  CIs_CSStrack[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
-CIs_CSStrack[,1] <- rowMeans(boot)
+CIs_CSStrack[,1] <- colMeans(boot)
 rownames(CIs_CSStrack) <- names(coef(m))
 
 
@@ -650,19 +634,19 @@ logL <- gen.likelihood(m)
 
 boot <- rep(NA,20)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesPopTrack"]){
-  boot <- cbind(boot,read.csv2(str_c(boot_path,i)))
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
 }
-boot <- boot[,-1]
+boot <- boot[-1,]
 
 
 #Putting into confidence intervals
 
 CIs_PopTrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
 for (i in 1:nrow(boot)){
-  CIs_PopTrack[i,2:3] <- c(sort(boot[i,])[250*N_imp],sort(boot[i,])[9750*N_imp])
+  CIs_PopTrack[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
-CIs_PopTrack[,1] <- rowMeans(boot)
+CIs_PopTrack[,1] <- colMeans(boot)
 rownames(CIs_PopTrack) <- names(coef(m))
 
 
