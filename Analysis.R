@@ -80,16 +80,8 @@ table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<
 
 publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
 
-## bmi for baseline data 
-#base_data$bmi[base_data$height<=100]<-round((base_data$weight/(((base_data$height+100)/100)^2))[base_data$height<=100],1)
-#base_data$height[base_data$height<=100] <- base_data$height[base_data$height<=100]+100
-#base_data$height[base_data$CS_ID==586] <- 100
-#base_data$bmi[base_data$CS_ID==586] <- 48.0
-#base_data$bmi[base_data$height==base_data$weight]<-NA
-#base_data$bmi[base_data$bmi<14]<-NA
-#base_data$bmi[base_data$bmi>147]<-NA
-#base_data$bmi[base_data$bmi==0]<-NA
-#summary(base_data$bmi[base_data$imputation!=0])
+base_data$bmi30 <- (base_data$bmi>=30)
+base_data$bmi25 <- (base_data$bmi>=25)
 
 #save(base_data,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/base_data.RData")
 
@@ -125,12 +117,6 @@ table(CSS$selfScoreCat[CSS$impnr!=0], useNA="always")
 ggplot(CSS, aes(x = factor(selfScoreCat))) +
   geom_bar()
 
-## bmi CSS
-#CSS$bmi[CSS$bmi==0] <- NA
-#CSS$bmi[CSS$height<100 & CSS$impnr!=0] <- (CSS$weight/(((CSS$height+100)/100)^2))[CSS$height<100  & CSS$impnr!=0]
-#CSS$height[CSS$height<100 & CSS$impnr!=0] <- CSS$height[CSS$height<100 & CSS$impnr!=0]+100 
-#CSS$bmi[CSS$height==CSS$weight]<-NA
-#summary(CSS$bmi[CSS$impnr!=0])
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
@@ -184,13 +170,6 @@ long_data_mids <- as.mids(long_data,.imp="imputation")
 # --------------------------------------------------------------------------- ##
 #Population sample
 
-## bmi
-#pop_data$bmi[pop_data$bmi==0] <- NA
-#pop_data$bmi[pop_data$height<100 & pop_data$imputation!=0] <- (pop_data$weight/(((pop_data$height+100)/100)^2))[pop_data$height<100  & pop_data$imputation!=0]
-#pop_data$height[pop_data$height<100 & pop_data$imputation!=0] <- pop_data$height[pop_data$height<100 & pop_data$imputation!=0]+100 
-#pop_data$bmi[pop_data$height==pop_data$weight]<-NA
-#pop_data$bmi[pop_data$bmi<14]<-NA
-#summary(pop_data$bmi[pop_data$imputation!=0])
 
 ## risk profiles for population sample
 pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
@@ -278,7 +257,9 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 #Reading in server simulations
 boot <- rep(NA,17)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesBase"]){
-  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+  #load(str_c(boot_path,i))
+  boot_part <- read.csv2(str_c(boot_path,i))
+  boot <- rbind(boot,boot_part)
 }
 boot <- boot[-1,]
 
@@ -291,13 +272,13 @@ boot <- boot[-1,]
 #We use  MI Boot PI in these calculations of confidence intervals and estimates:
 
 CIs_base <- data.frame("Estimate"=rep(NA,17),"Lower"=rep(NA,17),"Upper"=rep(NA,17))
-for (i in 1:nrow(boot)){
+for (i in 1:ncol(boot)){
   CIs_base[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
 CIs_base[,1] <- colMeans(boot)
 
-m <- lm(bmi ~ selfScoreCat+age+gender+education+occupation, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)))
+m <- lm(bmi ~ selfScoreCat+age+gender+education+occupation, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1 & gender%in% c("Male","Female"))))
 
 rownames(CIs_base) <- names(coef(m))
 
@@ -307,8 +288,8 @@ rownames(CIs_base) <- names(coef(m))
 # --------------------------------------------------------------------------- ##
 
 ## Using the mice package with mids objects
-mod30 <- with(base_data_mids,glm((bmi>=30)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
-mod25 <- with(base_data_mids,glm((bmi>=25)~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod30 <- with(base_data_mids,glm(bmi30~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod25 <- with(base_data_mids,glm(bmi25~(selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
 ## test for trend
 TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -319,15 +300,15 @@ test2 <- summary(pool(TEST2), conf.int = T)
 
 ## OR for BMI>30
 model30 <- summary(pool(mod30),conf.int = T)
-exp(model30$estimate)
-exp(model30$`2.5 %`)
-exp(model30$`97.5 %`)
+cbind(exp(model30$estimate),
+exp(model30$`2.5 %`),
+exp(model30$`97.5 %`))
 
 ## OR for BMI >25
 model25 <- summary(pool(mod25), conf.int=T)
-exp(model25$estimate)
-exp(model25$`2.5 %`)
-exp(model25$`97.5 %`)
+cbind(exp(model25$estimate),
+exp(model25$`2.5 %`),
+exp(model25$`97.5 %`))
 
 # --------------------------------------------------------------------------- ##
 ## longitudinal analysis of risk scores of smartphone behavior and changes in BMI
@@ -389,25 +370,25 @@ summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupat
 
 ## from below 25 to above 25 - Revise the model formulation to see if it makes sense!
 #Our POI's are selfScoreCat:followup_time's
-model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))
-model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))), conf.int = T)
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 
 ## test for trend
 
-test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25 <- summary(pool(test25), conf.int = T)
 #anova(test25,model25)
 
 
 ## from below 30 to above 30
 #Our POI's are selfScoreCat:followup_time's
-model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))), conf.int = T)
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
 
-test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 testT30 <- summary(pool(test30), conf.int=T)
 #anova(test30,model30)
 
@@ -415,10 +396,15 @@ testT30 <- summary(pool(test30), conf.int=T)
 
 ## Modelling numeric difference in bmi between baseline and followup
 
-m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
-summary(pool(with(bmi_followup_mids,lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights))), conf.int = T)
+#m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
+m <- lm(difference/as.numeric(followup_time)~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base")]))
 
-test_num <- with(bmi_followup_mids,lm(difference~(as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y)*followup_time-as.numeric(selfScoreCat.y)-age.y-gender.y-education.y-occupation.y,weights=sample_weights))
+model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(difference/as.numeric(followup_time)~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+
+cbind(model_summary_diff$estimate[1:4],model_summary_diff$`2.5 %`[1:4],model_summary_diff$`97.5 %`[1:4])
+
+
+test_num <- with(bmi_followup_mids,lm(difference/as.numeric(followup_time)~(as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
 test_Tnum <- summary(pool(test_num), conf.int=T)
 
 
