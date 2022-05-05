@@ -389,25 +389,25 @@ summary(glm(bmi30changeDown ~ (selfScoreCat.y+age.y+gender.y+education.y+occupat
 
 ## from below 25 to above 25 - Revise the model formulation to see if it makes sense!
 #Our POI's are selfScoreCat:followup_time's
-model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*(bmi.base>=25)*followup_time, weights=sample_weights.y,family=binomial))
-model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*(bmi.base>=25)*followup_time, weights=sample_weights.y,family=binomial))), conf.int = T)
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 
 ## test for trend
 
-test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y)*(bmi.base>=25)*followup_time, weights=sample_weights.y,family=binomial))
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y):(bmi.base>=25):followup_time-1, weights=sample_weights.y,family=binomial))
 testT25 <- summary(pool(test25), conf.int = T)
 #anova(test25,model25)
 
 
 ## from below 30 to above 30
 #Our POI's are selfScoreCat:followup_time's
-model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*(bmi.base>=30)*followup_time, weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*(bmi.base>=30)*followup_time, weights=sample_weights.y,family=binomial))), conf.int = T)
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
 
-test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y)*(bmi.base>=30)*followup_time, weights=sample_weights.y,family=binomial))
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y):(bmi.base>=30):followup_time-1, weights=sample_weights.y,family=binomial))
 testT30 <- summary(pool(test30), conf.int=T)
 #anova(test30,model30)
 
@@ -418,7 +418,8 @@ testT30 <- summary(pool(test30), conf.int=T)
 m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
 summary(pool(with(bmi_followup_mids,lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights))), conf.int = T)
 
-
+test_num <- with(bmi_followup_mids,lm(difference~(as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y)*followup_time-as.numeric(selfScoreCat.y)-age.y-gender.y-education.y-occupation.y,weights=sample_weights))
+test_Tnum <- summary(pool(test_num), conf.int=T)
 
 
 ## And then the long format for the numeric change: (alternative to the direct modelling of difference)
