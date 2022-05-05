@@ -118,7 +118,7 @@ publish(univariateTable(selfScoreCat ~ education,data=base_data, column.percent=
 publish(univariateTable(selfScoreCat ~ occupation,data=base_data, column.percent=TRUE))
 
 ## BMI 
-table(base_data$bmi)
+table(base_data$bmi, useNA="always")
 base_data$bmi<- gsub(",", ".", base_data$bmi)
 base_data$bmi <- as.numeric(base_data$bmi)
 
@@ -213,8 +213,9 @@ table(subject_tracking_clusters$followup)
   
 CSSAlt <- merge(tracking_CSS, CSS, by="userid")
 
+table(CSS$responseDate)
 
-## distributin only in survey data
+## distribution only in survey data
 
 ## age
 publish(univariateTable( ~ age,data=CSS, column.percent=TRUE))
