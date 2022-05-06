@@ -502,8 +502,8 @@ ggplot(pop_track, aes(x = factor(cluster))) +
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
 ## bmi kontinuert 
 
-m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
-            nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+#m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
+#            nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
 ## no adjustment for risk profiles
 #summary(pool(with(pop_track_mids,gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation),
@@ -520,11 +520,12 @@ m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6pro
 
 #Checking validity of Wald yet again
 
-logL <- gen.likelihood(m)
+#logL <- gen.likelihood(m)
 
 
+## Continuous Outcome
 
-#Confidence intervals and estimate distribution for fully adjusted model:
+#Confidence intervals and estimate distribution for fully adjusted model: (3 models - 1 full model and 2 trend models)
 
 boot <- rep(NA,22)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesPopTrack"]){
@@ -535,30 +536,144 @@ boot <- boot[-1,]
 
 #Putting into confidence intervals
 
-CIs_PopTrack <- data.frame("Estimate"=rep(NA,22),"Lower"=rep(NA,22),"Upper"=rep(NA,22))
+CIs_PopTrack <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
 for (i in 1:ncol(boot)){
   CIs_PopTrack[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
+PopTrack_boot <- boot
 CIs_PopTrack[,1] <- colMeans(boot)
 
 m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)))
 
 rownames(CIs_PopTrack) <- names(coef(m))
+colnames(PopTrack_boot) <- names(coef(m))
 
 ## trend for selfScore:
+m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+as.numeric(selfScoreCat)+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)))
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesTrendSPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
+
+CIs_PopTrackTrendS <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackTrendS[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackTrendS_boot <- boot
+CIs_PopTrackTrendS[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackTrendS) <- names(coef(m))
+colnames(PopTrackTrendS_boot) <- names(coef(m))
 
 
 ## trend for tracking:
+m <- lm(bmi~(as.numeric(track_severity)+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)))
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesTrendTPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
+
+CIs_PopTrackTrendT <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackTrendT[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackTrendT_boot <- boot
+CIs_PopTrackTrendT[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackTrendT) <- names(coef(m))
+colnames(PopTrackTrendT_boot) <- names(coef(m))
 
 
+#Confidence intervals and estimate distribution for model not adjusted for selfScore: (2 models)
+m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation), weights=sample_weights,
+        data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation","selfScoreCat")],imputation==1)))
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesNoSPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
 
-#Confidence intervals and estimate distribution for model not adjusted for selfScore:
+CIs_PopTrackNoS <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackNoS[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackNoS_boot <- boot
+CIs_PopTrackNoS[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackNoS) <- names(coef(m))
+colnames(PopTrackNoS_boot) <- names(coef(m))
+
+#trend
+m <- lm(bmi~(as.numeric(track_severity)+age+Gender+education+occupation), weights=sample_weights,
+        data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","track_severity","age","Gender","education","occupation","bmi","sample_weights","imputation","selfScoreCat")],imputation==1)))
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesTrendNoSPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
+
+CIs_PopTrackTrendNoS <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackTrendNoS[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackTrendNoS_boot <- boot
+CIs_PopTrackTrendNoS[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackTrendNoS) <- names(coef(m))
+colnames(PopTrackTrendNoS_boot) <- names(coef(m))
 
 
-#Confidence intervals and estimate distribution for model not adjusted for tracking:
+#Confidence intervals and estimate distribution for model not adjusted for tracking: (2 models)
+m <- lm(bmi~(selfScoreCat+age+Gender+education+occupation), weights=sample_weights,
+        data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation","selfScoreCat")],imputation==1)))
+
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesNoTPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
+
+CIs_PopTrackNoT <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackNoT[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackNoT_boot <- boot
+CIs_PopTrackNoT[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackNoT) <- names(coef(m))
+colnames(PopTrackNoT_boot) <- names(coef(m))
+
+#trend
+m <- lm(bmi~(as.numeric(selfScoreCat)+age+Gender+education+occupation), weights=sample_weights,
+        data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation","selfScoreCat")],imputation==1)))
+
+boot <- rep(NA,length(coef(m)))
+for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesTrendNoTPopTrack"]){
+  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
+}
+boot <- boot[-1,]
+
+CIs_PopTrackTrendNoT <- data.frame("Estimate"=rep(NA,ncol(boot)),"Lower"=rep(NA,ncol(boot)),"Upper"=rep(NA,ncol(boot)))
+for (i in 1:ncol(boot)){
+  CIs_PopTrackTrendNoT[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
+}
+
+PopTrackTrendNoT_boot <- boot
+CIs_PopTrackTrendNoT[,1] <- colMeans(boot)
+
+rownames(CIs_PopTrackTrendNoT) <- names(coef(m))
+colnames(PopTrackTrendNoT_boot) <- names(coef(m))
 
 
+### Binary Outcomes
 
 ## BMI >=25
 #summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
