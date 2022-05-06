@@ -188,6 +188,8 @@ table(pop_data$selfScoreCat[pop_data$imputation!=0])
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
+pop_track$track_severity <- (pop_track$cluster %in% c(1))*1+(pop_track$cluster %in% c(2,3))*2+(pop_track$cluster %in% c(5,6))*3+(pop_track$cluster %in% c(4))*4
+
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
 
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
@@ -500,21 +502,21 @@ ggplot(pop_track, aes(x = factor(cluster))) +
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
 ## bmi kontinuert 
 
-m <- gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),
-            nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster4prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
+            nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 
 ## no adjustment for risk profiles
-summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation),
-                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+#summary(pool(with(pop_track_mids,gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation),
+#                                        nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 ## no adjustment for clusters
-summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+Gender+education+occupation),
-                                        nu.formula = ~ (selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+#summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+Gender+education+occupation),
+#                                        nu.formula = ~ (selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 
 ## mutually adjusting for clusters/risk profiles
-summary(pool(with(pop_track_mids,gamlss(bmi~(cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),
-                                        nu.formula = ~ (cluster1prob+cluster2prob+cluster4prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
+#summary(pool(with(pop_track_mids,gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
+#                                        nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
 
 #Checking validity of Wald yet again
 
@@ -522,9 +524,9 @@ logL <- gen.likelihood(m)
 
 
 
-#Confidence intervals:
+#Confidence intervals and estimate distribution for fully adjusted model:
 
-boot <- rep(NA,20)
+boot <- rep(NA,22)
 for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesPopTrack"]){
   boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
 }
@@ -533,16 +535,28 @@ boot <- boot[-1,]
 
 #Putting into confidence intervals
 
-CIs_PopTrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
-for (i in 1:nrow(boot)){
+CIs_PopTrack <- data.frame("Estimate"=rep(NA,22),"Lower"=rep(NA,22),"Upper"=rep(NA,22))
+for (i in 1:ncol(boot)){
   CIs_PopTrack[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
 }
 
 CIs_PopTrack[,1] <- colMeans(boot)
 
-m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)))
 
 rownames(CIs_PopTrack) <- names(coef(m))
+
+## trend for selfScore:
+
+
+## trend for tracking:
+
+
+
+#Confidence intervals and estimate distribution for model not adjusted for selfScore:
+
+
+#Confidence intervals and estimate distribution for model not adjusted for tracking:
 
 
 
@@ -550,15 +564,15 @@ rownames(CIs_PopTrack) <- names(coef(m))
 #summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25 <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25 <- summary(pool(Random25), conf.int=T)
-exp(modelRandom25$estimate)
-exp(modelRandom25$`2.5 %`)
-exp(modelRandom25$`97.5 %`)
+cbind(exp(modelRandom25$estimate),
+exp(modelRandom25$`2.5 %`),
+exp(modelRandom25$`97.5 %`))
 
 # test for trend
-Random25Test <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25Test <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25Test), conf.int=T)
 
-Random25Test2 <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25Test2 <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(track_severity))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25Test2), conf.int=T)
 
 ## no adjustment for selfScoreCat
@@ -570,8 +584,22 @@ exp(modelRandom25No$`2.5 %`)
 exp(modelRandom25No$`97.5 %`)
 
 #test for trend
-Random25NoTest <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25NoSest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(track_severity)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25NoSest), conf.int=T)
+
+
+## no adjustment for tracking
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25NoT <- with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25NoT <- summary(pool(Random25No), conf.int=T)
+exp(modelRandom25NoT$estimate)
+exp(modelRandom25NoT$`2.5 %`)
+exp(modelRandom25NoT$`97.5 %`)
+
+#test for trend
+Random25NoTest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(selfScoreCat)+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTest), conf.int=T)
+
 
 ## BMI >30
 #summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
@@ -582,11 +610,11 @@ exp(modelRandom30$`2.5 %`)
 exp(modelRandom30$`97.5 %`)
 
 #test for trend
-Random30Test <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30Test <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30Test), conf.int = T)
 
-Random30Test2 <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random30Test2), conf.int = T)
+Random30Test2 <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(track_severity))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30Test2), conf.int=T)
 
 
 ## no adjustment for selfScoreCat
@@ -598,36 +626,21 @@ exp(modelRandom30No$`2.5 %`)
 exp(modelRandom30No$`97.5 %`)
 
 #test for trend
-Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(selfScoreCat)+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoT), conf.int = T)
 
+## no adjustment for tracking
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30NoT <- summary(pool(Random30No), conf.int=T)
+exp(modelRandom30NoT$estimate)
+exp(modelRandom30NoT$`2.5 %`)
+exp(modelRandom30NoT$`97.5 %`)
 
-####### BMI and self-reported risk profiles
+#test for trend
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(track_severity))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30NoT), conf.int = T)
 
-## bmi >25
-#summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25Risk <- with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom25Risk <- summary(pool(Random25Risk), conf.int = T)
-exp(modelRandom25Risk$estimate)
-exp(modelRandom25Risk$`2.5 %`)
-exp(modelRandom25Risk$`97.5 %`)
-
-# test for trend
-Random25RiskT <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random25RiskT))
-
-
-## BMI >30
-#summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30Risk <- with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom30Risk <- summary(pool(Random30Risk), conf.int = T)
-exp(modelRandom30Risk$estimate)
-exp(modelRandom30Risk$`2.5 %`)
-exp(modelRandom30Risk$`97.5 %`)
-
-## test for trend (selfScoreCat numeric)
-Random30RiskT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random30RiskT), conf.int = T)
 
 
 ###############################################################################
