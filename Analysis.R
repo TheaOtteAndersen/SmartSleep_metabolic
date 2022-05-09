@@ -189,12 +189,12 @@ table(pop_data$selfScoreCat[pop_data$imputation!=0])
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
-<<<<<<< HEAD
+
 ## hvad fortæller denne variabel?
 pop_track$track_severity <- (pop_track$cluster %in% c(1))*1+(pop_track$cluster %in% c(2,3))*2+(pop_track$cluster %in% c(5,6))*3+(pop_track$cluster %in% c(4))*4
-=======
+#=======
 pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track$cluster %in% c("Cluster 2","Cluster 3"))*2+(pop_track$cluster %in% c("Cluster 5","Cluster 6"))*3+(pop_track$cluster %in% c("Cluster 4"))*4
->>>>>>> 5c130b88988f1449a7599b55ac8bb147815ee713
+
 
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
 
