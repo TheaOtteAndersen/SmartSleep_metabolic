@@ -355,7 +355,6 @@ pool_inf_baseTrend$pval
 
 summary(pool_inf_baseTrend)
 
-
 #Going to means:
 
 m$mu.coefficients <- pool_inf_baseTrend$qbar[1:length(m$mu.coefficients)]
@@ -464,32 +463,7 @@ test_num <- with(bmi_followup_mids,lm(difference/as.numeric(followup_time)~(as.n
 test_Tnum <- summary(pool(test_num), conf.int=T)
 
 
-## And then the long format for the numeric change: (alternative to the direct modelling of difference)
 
-#Bootstrapping confidence intervals:
-
-#Reading in server simulations
-boot <- rep(NA,34)
-for (i in list.files(boot_path)[substr(list.files(boot_path),1,13)=="estimatesLong"]){
-  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
-}
-boot <- boot[-1,]
-
-
-#Putting into confidence intervals
-
-CIs_long <- data.frame("Estimate"=rep(NA,34),"Lower"=rep(NA,34),"Upper"=rep(NA,34))
-for (i in 1:ncol(boot)){
-  CIs_long[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
-}
-
-CIs_long[,1] <- colMeans(boot)
-
-m <- lm(bmi~(selfScoreCat+age+gender+education+occupation)*time, weights=sample_weights, data=na.omit(subset(long_data,imputation==10 & gender %in% c("Male","Female")))) #(selfScoreCat+age+gender+education+occupation)*time
-
-rownames(CIs_long) <- names(coef(m))
-
-#
 
 #Generally:
 #Wald intervals with Robust=T are better for misspecified models.
@@ -516,27 +490,6 @@ summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+clus
 #Numeric BMI
 
 #Confidence intervals:
-
-#Reading in server simulations
-boot <- rep(NA,20)
-for (i in list.files(boot_path)[substr(list.files(boot_path),1,17)=="estimatesCSStrack"]){
-  boot <- rbind(boot,read.csv2(str_c(boot_path,i)))
-}
-boot <- boot[-1,]
-
-
-#Putting into confidence intervals
-
-CIs_CSStrack <- data.frame("Estimate"=rep(NA,20),"Lower"=rep(NA,20),"Upper"=rep(NA,20))
-for (i in 1:nrow(boot)){
-  CIs_CSStrack[i,2:3] <- c(sort(boot[,i])[250*N_imp],sort(boot[,i])[9750*N_imp])
-}
-
-CIs_CSStrack[,1] <- colMeans(boot)
-
-m <- lm(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10 & gender %in% c("Female","Male"))))
-
-rownames(CIs_CSStrack) <- names(coef(m))
 
 
 # --------------------------------------------------------------------------- ##
@@ -637,8 +590,6 @@ upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[9,6
 confints_PopTrack <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6,lowerCat2,lowerCat3,lowerCat4),
                            c(estClust2,estClust3,estClust4,estClust5,estClust6,estCat2,estCat3,estCat4),
                            c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6,upperCat2,upperCat3,upperCat4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
 
 
 #Trends:
