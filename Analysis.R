@@ -600,6 +600,7 @@ confints_PopTrack <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,low
 
 #Trends:
 
+
 #SelfScore
 coefs <- list()
 ses <- list()
@@ -648,7 +649,6 @@ upperCat <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend
 confints_PopTrackSTrend <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6,lowerCat),
                            c(estClust2,estClust3,estClust4,estClust5,estClust6,estCat),
                            c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6,upperCat))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
 
 #Track
 coefs <- list()
