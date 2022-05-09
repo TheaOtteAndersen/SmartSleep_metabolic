@@ -66,7 +66,7 @@ base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
 base_data$selfScoreCat[base_data$selfScore>=8]="2"
 base_data$selfScoreCat[base_data$selfScore>=10]="3"
 base_data$selfScoreCat[base_data$selfScore>=12]="4"
-table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always") 
+table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always")/25
 
 # bar chart selfScoreCat 
 ggplot(base_data, aes(x = factor(selfScoreCat))) +
@@ -79,7 +79,7 @@ publish(univariateTable( ~ mobileCheck,data=base_data, column.percent=TRUE))
 table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4)/20
 
 publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
-
+      
 base_data$bmi30 <- (base_data$bmi>=30)
 base_data$bmi25 <- (base_data$bmi>=25)
 
@@ -105,13 +105,13 @@ CSS$selfScore <- (CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileU
   (CSS$mobileUseNight=="Every night or almost every night")*4+(CSS$mobileUseNight=="A few times a week")*3+(CSS$mobileUseNight=="A few times a month or less")*2+(CSS$mobileUseNight=="Never")*1+
   (CSS$mobileCheck==">20 times an hour")*4+(CSS$mobileCheck=="11-20 times an hour")*4+(CSS$mobileCheck=="5-10 times an hour")*3+(CSS$mobileCheck=="1-4 times an hour")*2+(CSS$mobileCheck=="Every 2nd hour")*2+(CSS$mobileCheck=="Several times a day")*1+(CSS$mobileCheck=="Once a day or less")*1+
   (CSS$pmpuScale<=14)*1+(CSS$pmpuScale>14 & CSS$pmpuScale<17)*2+(CSS$pmpuScale>=17 & CSS$pmpuScale<19)*3+(CSS$pmpuScale>=19)*4
-summary(CSS$selfScore[CSS$impnr!=0])
+summary(CSS$selfScore[CSS$imputation!=0])
 CSS$selfScoreCat <- NA
 CSS$selfScoreCat[!is.na(CSS$selfScore)]<-"1"
 CSS$selfScoreCat[CSS$selfScore>=8]="2"
 CSS$selfScoreCat[CSS$selfScore>=10]="3"
 CSS$selfScoreCat[CSS$selfScore>=12]="4"
-table(CSS$selfScoreCat[CSS$impnr!=0], useNA="always")
+table(CSS$selfScoreCat[CSS$imputation!=0], useNA="always")
 
 # bar chart selfScoreCat 
 ggplot(CSS, aes(x = factor(selfScoreCat))) +
@@ -170,13 +170,14 @@ long_data_mids <- as.mids(long_data,.imp="imputation")
 # --------------------------------------------------------------------------- ##
 #Population sample
 
-
 ## risk profiles for population sample
 pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
   (pop_data$mobileUseNight=="Every night or almost every night")*4+(pop_data$mobileUseNight=="A few times a week")*3+(pop_data$mobileUseNight=="A few times a month or less")*2+(pop_data$mobileUseNight=="Never")*1+
   (pop_data$mobileCheck==">20 times an hour")*4+(pop_data$mobileCheck=="11-20 times an hour")*4+(pop_data$mobileCheck=="5-10 times an hour")*3+(pop_data$mobileCheck=="1-4 times an hour")*2+(pop_data$mobileCheck=="Every 2nd hour")*2+(pop_data$mobileCheck=="Several times a day")*1+(pop_data$mobileCheck=="Once a day or less")*1+
   (pop_data$pmpuScale<=14)*1+(pop_data$pmpuScale>14 & pop_data$pmpuScale<17)*2+(pop_data$pmpuScale>=17 & pop_data$pmpuScale<19)*3+(pop_data$pmpuScale>=19)*4
 summary(pop_data$selfScore[pop_data$imputation!=0])
+
+## categorise selfScoreCat?
 pop_data$selfScoreCat <- NA
 pop_data$selfScoreCat[!is.na(pop_data$selfScore)]<-"1"
 pop_data$selfScoreCat[pop_data$selfScore>=8]="2"
@@ -188,6 +189,7 @@ table(pop_data$selfScoreCat[pop_data$imputation!=0])
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
+## hvad fortæller denne variabel?
 pop_track$track_severity <- (pop_track$cluster %in% c(1))*1+(pop_track$cluster %in% c(2,3))*2+(pop_track$cluster %in% c(5,6))*3+(pop_track$cluster %in% c(4))*4
 
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
@@ -630,10 +632,13 @@ CIs_PopTrackTrendNoT[,1] <- colMeans(boot)
 rownames(CIs_PopTrackTrendNoT) <- names(coef(m))
 colnames(PopTrackTrendNoT_boot) <- names(coef(m))
 
+# --------------------------------------------------------------------------- ##
+### Binary Outcomes for population sample
+# --------------------------------------------------------------------------- ##
 
-### Binary Outcomes
+## BMI > 25
 
-## BMI >=25
+## BMI >=25 (mutually adjusted)
 #summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25 <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25 <- summary(pool(Random25), conf.int=T)
@@ -641,77 +646,79 @@ cbind(exp(modelRandom25$estimate),
 exp(modelRandom25$`2.5 %`),
 exp(modelRandom25$`97.5 %`))
 
-# test for trend
+# test for trend (selfscorecat as numeric and adjustment for clusters)
 Random25Test <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25Test), conf.int=T)
 
+# test for trend (clusters as numeric and adjustment for selfScoreCat)
 Random25Test2 <- with(pop_track_mids,glm((bmi>=25) ~ ((as.numeric(track_severity))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25Test2), conf.int=T)
 
-## no adjustment for selfScoreCat
+## Clusters and BMI<25 (no adjustment for selfScoreCat)
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No <- summary(pool(Random25No), conf.int=T)
-exp(modelRandom25No$estimate)
-exp(modelRandom25No$`2.5 %`)
-exp(modelRandom25No$`97.5 %`)
+cbind(exp(modelRandom25No$estimate),
+exp(modelRandom25No$`2.5 %`),
+exp(modelRandom25No$`97.5 %`))
 
-#test for trend
+#test for trend  (clusters as numeric and no adjustment for selfScoreCat)
 Random25NoSest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(track_severity)+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoSest), conf.int=T)
 
-
-## no adjustment for tracking
+## SelfScoreCat and BMI>25 (no adjustment for tracking)
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoT <- with(pop_track_mids,glm((bmi>=25) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom25NoT <- summary(pool(Random25No), conf.int=T)
-exp(modelRandom25NoT$estimate)
-exp(modelRandom25NoT$`2.5 %`)
-exp(modelRandom25NoT$`97.5 %`)
+modelRandom25NoT <- summary(pool(Random25NoT), conf.int=T)
+cbind(exp(modelRandom25NoT$estimate),
+exp(modelRandom25NoT$`2.5 %`),
+exp(modelRandom25NoT$`97.5 %`))
 
-#test for trend
+#test for trend (selfscoreCat uden cluster)
 Random25NoTest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(selfScoreCat)+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTest), conf.int=T)
 
+# --------------------------------------------------------------------------- ##
+## BMI > 30
 
-## BMI >30
+## BMI >30 (mutually adjusted for clusters and selfScoreCat)
 #summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30 <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30 <- summary(pool(Random30), conf.int = T)
-exp(modelRandom30$estimate)
-exp(modelRandom30$`2.5 %`)
-exp(modelRandom30$`97.5 %`)
+cbind(exp(modelRandom30$estimate),
+exp(modelRandom30$`2.5 %`),
+exp(modelRandom30$`97.5 %`))
 
-#test for trend
+#test for trend (selfScoreCat as numeric with adjustment for cluster)
 Random30Test <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+(as.numeric(selfScoreCat))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30Test), conf.int = T)
 
+# test for trend (clusters as numeric and with adjustment for selfScoreCat)
 Random30Test2 <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(track_severity))+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30Test2), conf.int=T)
 
-
-## no adjustment for selfScoreCat
+## clusters and BMI>30 (no adjustment for selfScoreCat)
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No <- summary(pool(Random30No), conf.int = T)
-exp(modelRandom30No$estimate)
-exp(modelRandom30No$`2.5 %`)
-exp(modelRandom30No$`97.5 %`)
+cbind(exp(modelRandom30No$estimate),
+exp(modelRandom30No$`2.5 %`),
+exp(modelRandom30No$`97.5 %`))
 
-#test for trend
-Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(selfScoreCat)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+#test for trend (clusters as numeric and no adjustment for selfScoreCat)
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(track_severity))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoT), conf.int = T)
 
 ## no adjustment for tracking
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom30NoT <- summary(pool(Random30No), conf.int=T)
-exp(modelRandom30NoT$estimate)
-exp(modelRandom30NoT$`2.5 %`)
-exp(modelRandom30NoT$`97.5 %`)
+modelRandom30NoT <- summary(pool(Random30NoT), conf.int=T)
+cbind(exp(modelRandom30NoT$estimate),
+exp(modelRandom30NoT$`2.5 %`),
+exp(modelRandom30NoT$`97.5 %`))
 
-#test for trend
-Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ ((as.numeric(track_severity))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+#test for trend (selfScoreCat as numeric and no adjustment for clusters)
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(selfScoreCat)+age+gender+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoT), conf.int = T)
 
 
@@ -727,12 +734,18 @@ clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by=
 ## merge with tracking data
 clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
 
-## no cleanng in bmi.clinical as it should be correct compared to self-reports
-#clinical_sample$bmi.clinical[clinical_sample$bmi.clinical==0] <- NA
-#clinical_sample$bmi.clinical[clinical_sample$height<100 & clinical_sample$imputation!=0] <- (clinical_sample$weight/(((clinical_sample$height+100)/100)^2))[clinical_sample$height<100  & clinical_sample$imputation!=0]
-#clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0] <- clinical_sample$height[clinical_sample$height<100 & clinical_sample$imputation!=0]+100 
-#clinical_sample$bmi.clinical[clinical_sample$height==clinical_sample$weight]<-NA#
-#clinical_sample$bmi.clinical[clinical_sample$bmi.clinical<14]<-NA
+# --------------------------------------------------------------------------- ##
+## BMI
+table(clinical_sample$bmi.clinical)
+clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
+summary(clinical_sample$bmi.clinical, useNA="always")
+
+## BMI clinical
+table(clinical_sample$bmi.clinical)
+clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
+publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+# --------------------------------------------------------------------------- ##
+## SelfScoreCat
 
 clinical_sample$selfScore <- (clinical_sample$mobileUseBeforeSleep=="5-7 times per week")*4+(clinical_sample$mobileUseBeforeSleep=="2-4 times per week")*3+(clinical_sample$mobileUseBeforeSleep=="Once a week")*3+(clinical_sample$mobileUseBeforeSleep=="Every month or less")*2+(clinical_sample$mobileUseBeforeSleep=="Never")*1+
   (clinical_sample$mobileUseNight=="Every night or almost every night")*4+(clinical_sample$mobileUseNight=="A few times a week")*3+(clinical_sample$mobileUseNight=="A few times a month or less")*2+(clinical_sample$mobileUseNight=="Never")*1+
@@ -744,17 +757,28 @@ clinical_sample$selfScoreCat[!is.na(clinical_sample$selfScore)]<-"1"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=8]="2"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=10]="3"
 clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
-table(clinical_sample$selfScoreCat, useNA="always")
+table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0],useNA="always")/25
+clinical_sample$selfScoreCat <- as.factor(clinical_sample$selfScoreCat)
 
-## BMI clinical
-table(clinical_sample$bmi.clinical)
-clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
-publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+# --------------------------------------------------------------------------- ##
+## descriptive of clinical sample
+## age
+publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))/25
+clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 
-## descriptives of clinical sample
-publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))
-
+## BMI
 publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+
+## categorize BMI
+clinical_sample$bmiCat[clinical_sample$bmi.clinical<25] <- "<25"
+clinical_sample$bmiCat[clinical_sample$bmi.clinical>=25 & clinical_sample$bmi.clinical<30] <- "25-30"
+clinical_sample$bmiCat[clinical_sample$bmi.clinical>=30] <- ">=30"
+table(clinical_sample$bmiCat, useNA="always")/26
+prop.table(table(clinical_sample$bmiCat, useNA="always"))
+table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always")/25
+prop.table(table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always"))
+publish(univariateTable(selfScoreCat ~ bmiCat,data=clinical_sample, column.percent=TRUE))
+
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
 
@@ -764,17 +788,19 @@ clinical_sample$bmi <- as.numeric(clinical_sample$bmi.clinical)
 clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi.clinical>=25)
 clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
 
+publish(univariateTable(selfScoreCat ~ bmi25,data=clinical_sample, column.percent=TRUE))
+
+## age at clinical examination (OBS. NOGET ER GALT I DENNE VARIABLE)
+table(clinical_sample$age.y, useNA="always")
 clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(clinical_sample$age.y,2+(mod(nchar(clinical_sample$age.y),4)==1),2+(mod(nchar(clinical_sample$age.y),4)==1)),".",
                  substr(clinical_sample$age.y,3+(mod(nchar(clinical_sample$age.y),4)!=3),3+(mod(nchar(clinical_sample$age.y),4)!=3))))
+
+
+# --------------------------------------------------------------------------- ##
 
 ## systolic blood pressure
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
 publish(univariateTable(selfScoreCat ~ sbp,data=clinical_sample, column.percent=TRUE))
-
-## categorize systolic blood pressure into high (>=140) and normal (<140)
-clinical_sample$sbpCat[clinical_sample$sbp>=140] <- 1#"High"
-clinical_sample$sbpCat[clinical_sample$sbp<140] <- 0#"Normal"
-publish(univariateTable( ~ sbpCat,data=clinical_sample, column.percent=TRUE))
 
 # diastolic blood pressure
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
@@ -789,9 +815,6 @@ table(clinical_sample$dbpCat, useNA="always")
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
 publish(univariateTable(selfScoreCat ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$ratiowaisthipCat[clinical_sample$ratiowaisthip>=0.85] <- 1#"High"
-clinical_sample$ratiowaisthipCat[clinical_sample$ratiowaisthip<0.85] <- 0#"Normal"
-table(clinical_sample$ratiowaisthipCat)
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
 
@@ -814,50 +837,28 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
 publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
 
-## categorize
-clinical_sample$hdlCat[clinical_sample$hdl<=1.2] <- 1#"Bad"
-clinical_sample$hdlCat[clinical_sample$hdl>1.2] <- 0#"Good"
-table(clinical_sample$hdlCat)
-
-publish(univariateTable(selfScoreCat ~ hdlCat,data=clinical_sample, column.percent=TRUE))
-
 ## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
 publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
 
-## categorize LDL
-clinical_sample$ldlCat[clinical_sample$ldl>=4.3] <- 1#"Bad"
-clinical_sample$ldlCat[clinical_sample$ldl<4.3] <- 0#"Good"
-publish(univariateTable(selfScoreCat ~ ldlCat,data=clinical_sample, column.percent=TRUE))
-
-## triglycerides
-
-clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
-publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
-
-clinical_sample$triglyceridsCat[clinical_sample$triglycerids>=1.2] <- 1#"Bad"
-clinical_sample$triglyceridsCat[clinical_sample$triglycerids<1.2] <- 0#"Good"
-publish(univariateTable(selfScoreCat ~ triglyceridsCat,data=clinical_sample, column.percent=TRUE))
-
-
-## hba1c
-clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
-publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
-
-## categorize hba1c
-clinical_sample$hba1cCat[clinical_sample$hba1c>=44] <- 1#"Bad"
-clinical_sample$hba1cCat[clinical_sample$hba1c<44] <- 0#"Good"
-publish(univariateTable(selfScoreCat ~ hba1cCat,data=clinical_sample, column.percent=TRUE))
-
+## VLDL
+clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
+publish(univariateTable( selfScoreCat~ vldl,data=clinical_sample, column.percent=TRUE))
 
 ## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
 publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol>=5] <- 1#"Bad"
-clinical_sample$t_cholesterolCat[clinical_sample$t_cholesterol<5] <- 0#"Good"
-publish(univariateTable(selfScoreCat ~ t_cholesterolCat,data=clinical_sample, column.percent=TRUE))
+## triglycerides
+clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
+publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
+## hba1c
+clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
+publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+
+
+# --------------------------------------------------------------------------- ##
 
 #Models - multiple testing issue if we are going to 'pick and choose' which responses we would like to look at.
 table(clinical_sample$age.x)
@@ -871,8 +872,8 @@ clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 #      summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit))))$std.error[2:4])
 hist(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
 lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))),sd=sd(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))))
-plot(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
-plot(fitted(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(fitted(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
 
 cbind(confint(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
       confint(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
