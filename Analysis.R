@@ -421,7 +421,7 @@ exp(model25$`97.5 %`))
 
 
 ## ----- ##
-#Final change analyses (per Naja's requests)
+#Final change analyses 
 ## ----- ##
 
 ## from below 25 to above 25 - Revise the model formulation to see if it makes sense!
@@ -946,6 +946,7 @@ summary(clinical_sample$bmi.clinical, useNA="always")
 table(clinical_sample$bmi.clinical)
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+
 # --------------------------------------------------------------------------- ##
 ## SelfScoreCat
 
@@ -1008,14 +1009,15 @@ publish(univariateTable(selfScoreCat ~ sbp,data=clinical_sample, column.percent=
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
 publish(univariateTable(selfScoreCat ~ dbp,data=clinical_sample, column.percent=TRUE))
 
-clinical_sample$dbpCat[clinical_sample$dbp>=90] <- 1#"High"
-clinical_sample$dbpCat[clinical_sample$dbp<90] <- 0#"Normal"
-table(clinical_sample$dbpCat, useNA="always")
-
 ## hip waist ratio
 
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
 publish(univariateTable(selfScoreCat ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+
+
+## bmi clinical
+clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
+publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
@@ -1032,6 +1034,7 @@ hist(as.numeric(clinical_sample$glucose),breaks=40)
 hist(as.numeric(clinical_sample$waist),breaks=20)
 hist(as.numeric(clinical_sample$hip),breaks=20)
 hist(as.numeric(clinical_sample$ratiowaisthip),breaks=20)
+hist(as.numeric(clinical_sample$bmi.clinical),breaks=20)
 hist(rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T),breaks=20)
 hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T),breaks=20)
 
@@ -1061,6 +1064,7 @@ publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percen
 
 
 # --------------------------------------------------------------------------- ##
+## OBS TIL CHRISTOFFER: JEG TROR IKKE DE NYE CLUSTERS MED 6 ER INKLUDERET??
 
 #Models - multiple testing issue if we are going to 'pick and choose' which responses we would like to look at.
 table(clinical_sample$age.x)
@@ -1146,18 +1150,17 @@ lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
 plot(residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 plot(fitted(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
 
-#glucose
-#glu_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),breaks=20,prob=T)
-res <- residuals(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit))
+# bmi
+hist(residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
-plot(fitted(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
+plot(residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-cbind(confint(glm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+
 
 #ratiowaisthip
 #wh_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation))))$estimate[2:4],

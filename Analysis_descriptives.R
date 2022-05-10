@@ -88,22 +88,22 @@ publish(univariateTable(selfScoreCat ~ age,data=base_data, column.percent=TRUE))
 
 ## SD for risk profiles 1
 sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==1)$age))^2)/19
+  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==1)$age))^2)/25
 )
 
 ## SD for risk profile 2
 sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==2)$age))^2)/19
+  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==2)$age))^2)/25
 )
 
 ## SD for risk profile 3
 sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==3)$age))^2)/19
+  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==3)$age))^2)/25
 )
 
 ## SD for risk profile 4
 sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==4)$age))^2)/19
+  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==4)$age))^2)/25
 )
 
 ## gender
@@ -123,9 +123,8 @@ base_data$bmi<- gsub(",", ".", base_data$bmi)
 base_data$bmi <- as.numeric(base_data$bmi)
 
 publish(univariateTable(selfScoreCat ~ bmi,data=base_data, column.percent=TRUE))
-aggregate(base_data$bmi, by=list(base_data$selfScoreCat), FUN=median, na.rm=T)
-aggregate(base_data$bmi, by=list(base_data$selfScoreCat), FUN=quantile, probs=0.25, na.rm=T)
-aggregate(base_data$bmi, by=list(base_data$selfScoreCat), FUN=quantile, probs=0.75, na.rm=T)
+
+## få SD for BMI
 
 ## bmi >=25
 base_data$bmiCat[base_data$bmi<25] <- "<25"
