@@ -1079,7 +1079,6 @@ publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percen
 
 
 # --------------------------------------------------------------------------- ##
-## OBS TIL CHRISTOFFER: JEG TROR IKKE DE NYE CLUSTERS MED 6 ER INKLUDERET??
 
 #Models - multiple testing issue if we are going to 'pick and choose' which responses we would like to look at.
 table(clinical_sample$age.x)
