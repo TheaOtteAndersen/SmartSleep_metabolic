@@ -338,9 +338,20 @@ lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,5],si
 estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,1],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
 upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
 
-
 confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
 
+
+## IMPORTANT TO DO:
+
+#Untruncated integration: integrate(function(y) y*(1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
+
+#Use the untruncated BCCG in models? Insert these untruncated integrations everywhere, and change BCCG to BCCGuntr everywhere.
+
+#Then we are sure of the location insensitivty in differences between means translated from differences between medians.
+
+#The results will all be the same.
+
+##
 
 
 #trend
