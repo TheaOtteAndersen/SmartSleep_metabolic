@@ -190,9 +190,7 @@ pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
 
-## hvad fortæller denne variabel?
-pop_track$track_severity <- (pop_track$cluster %in% c(1))*1+(pop_track$cluster %in% c(2,3))*2+(pop_track$cluster %in% c(5,6))*3+(pop_track$cluster %in% c(4))*4
-#=======
+## Tracking clusters som én numerisk variabel
 pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track$cluster %in% c("Cluster 2","Cluster 3"))*2+(pop_track$cluster %in% c("Cluster 5","Cluster 6"))*3+(pop_track$cluster %in% c("Cluster 4"))*4
 
 
@@ -312,6 +310,7 @@ m3 <- integrate(function(y) y*dBCCG(x=y,mu=mus[3],sigma=exp(pool_inf_base$qbar[2
 m4 <- integrate(function(y) y*dBCCG(x=y,mu=mus[4],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value
 
 ms <- c(m1,m2,m3,m4)
+c(m2,m3,m4)-m1
 
 plot(mus,ms)
 
@@ -596,7 +595,7 @@ upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[9,6
 confints_PopTrack <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6,lowerCat2,lowerCat3,lowerCat4),
                            c(estClust2,estClust3,estClust4,estClust5,estClust6,estCat2,estCat3,estCat4),
                            c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6,upperCat2,upperCat3,upperCat4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
+rownames(confints_PopTrack) <- names(pool_inf_PopTrack$qbar)[2:9]
 
 #Trends:
 
@@ -1215,6 +1214,7 @@ sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster2pr
 tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
 vldl_int <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
 wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
 
 df_ints <- data.frame(rbind(hdl_int[2,],ldl_int[2,],vldl_int[2,],t_chol_int[2,],tri_int[2,],hba1c_int[2,],dbp_int[2,],sbp_int[2,],wh_int[2,],glu_int[2,]),
