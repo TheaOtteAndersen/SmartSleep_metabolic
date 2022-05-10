@@ -198,6 +198,15 @@ pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track
 
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
+## Clinical Data
+
+## merge survey and clinical data
+clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
+## merge with tracking data
+clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
+
+
+
 #### -------------------------------- ####
 
 #### Write out data files for gamlss bootstrap
@@ -930,11 +939,6 @@ summary(pool(Random30NoT), conf.int = T)
 ###############################################################################
 
 #Analysis of the clinical sample data - interest in biomarkers
-
-## merge survey and clinical data
-clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
-## merge with tracking data
-clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
 
 # --------------------------------------------------------------------------- ##
 ## BMI
