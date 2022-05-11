@@ -265,7 +265,6 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 
 #Alternative: Pretty good fit. A general family of models.
 
-#m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~(selfScoreCat+age+gender+education+occupation), nu.formula =~ (selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
 
 #Confidence intervals and estimates:
 
@@ -342,6 +341,14 @@ confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat
 
 
 ## IMPORTANT TO DO:
+
+# sigma = exp(pool_inf_base$qbar[20])
+
+# nu = pool_inf_base$qbar[21]
+
+# mu = summary(pool_inf_base)[2,1]
+
+#Density integration: integrate(function(y) (1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
 
 #Untruncated integration: integrate(function(y) y*(1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
 
@@ -508,8 +515,8 @@ test_Tnum <- summary(pool(test_num), conf.int=T)
 summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 
-#m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation),
-#            nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation),weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
+#m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ 1,
+#            nu.formula = ~ 1,weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
 #robust=TRUE? Doesn't change much when the fit is this good.
 
 #Numeric BMI
@@ -532,28 +539,6 @@ ggplot(pop_track, aes(x = factor(cluster))) +
 #analyses
 
 ## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
-## bmi kontinuert 
-
-#m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
-#            nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","Gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
-
-## no adjustment for risk profiles
-#summary(pool(with(pop_track_mids,gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation),
-#                                        nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
-
-## no adjustment for clusters
-#summary(pool(with(pop_track_mids,gamlss(bmi~(selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (selfScoreCat+age+Gender+education+occupation),
-#                                        nu.formula = ~ (selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
-
-
-## mutually adjusting for clusters/risk profiles
-#summary(pool(with(pop_track_mids,gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),
-#                                        nu.formula = ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation),weights=sample_weights,family=BCCG,method=RS(100)))))
-
-#Checking validity of Wald yet again
-
-#logL <- gen.likelihood(m)
-
 
 ## Continuous Outcome
 
@@ -563,7 +548,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG) #Alternative is BCT, but fits with many many degrees of freedom, suggesting no real difference between BCCG and BCT.
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
