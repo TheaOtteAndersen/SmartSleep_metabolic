@@ -274,7 +274,7 @@ vcovs <- list()
 models <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG) #May use BCS instead of BCCG which corresponds to using a t distribution instead of normal. This can fit heavier tails, though in this case a very large df is fitted, meaning that there is not much difference.
   m_sum <- summary(m)
   models[[i]] <- m
   coefs[[i]] <- m_sum[,1]
@@ -340,7 +340,7 @@ upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],si
 confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
 
 
-## IMPORTANT TO DO:
+##
 
 # sigma = exp(pool_inf_base$qbar[20])
 
@@ -352,11 +352,6 @@ confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat
 
 #Untruncated integration: integrate(function(y) y*(1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
 
-#Use the untruncated BCCG in models? Insert these untruncated integrations everywhere, and change BCCG to BCCGuntr everywhere.
-
-#Then we are sure of the location insensitivty in differences between means translated from differences between medians.
-
-#The results will all be the same.
 
 ##
 
