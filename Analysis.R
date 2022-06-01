@@ -34,6 +34,40 @@ setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputat
 
 ## load tracking data 
 subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
+subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_four_clusters.csv")
+
+## Mapping compositions to R^(D-1)
+SBP6 <- matrix(c(1,1,1,-1,-1,-1,1,-1,-1,0,0,0,0,0,0,1,1,-1,0,1,-1,0,0,0,0,0,0,1,-1,0),byrow=T,nrow=5,ncol=6)
+SBP4 <- matrix(c(1,1,-1,1,1,1,0,-1,1,-1,0,0),byrow=T,nrow=3,ncol=4)
+
+X6 <- subject_tracking_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob")]
+X4 <- subject_tracking_four_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob")]
+
+Phi.generator <- function(X) {
+  K <- nrow(X)
+  L <- ncol(X)
+  A <- matrix(rep(NA,K*L),nrow = K, ncol = L)
+  for (i in 1:K){
+    r <- sum(X[i,]>0)
+    s <- sum(X[i,]<0)
+    A[i,] <- X[i,]*sqrt((r*s)/(r+s))*((X[i,]>0)*1/r + (X[i,]<0)*1/s)
+  }
+  return(A)
+}
+
+Phi6 <- Phi.generator(SBP6)
+Phi4 <- Phi.generator(SBP4)
+
+ilrX6 <- as.matrix(log(X6)) %*% t(Phi6)
+ilrX4 <- as.matrix(log(X4)) %*% t(Phi4)
+
+clrX6 <- ilrX6 %*% Phi6
+clrX4 <- ilrX4 %*% Phi4
+
+## The ilr coordinates can be readily used as covariates in regression models. They are coefficients with respect to a basis of the simplex space (in this case the SBP basis).
+## The clr coordinates should not be used as covariates in regression models as they will lead to singular covariance matrices, as they are constrained to have component sums zero and thus are not coefficients with respect to a basis of the simplex space.
+
+## We may afterwards back-transform fitted coefficients to coefficients in the original simplex space, thereby getting coefficients associated with each component.
 
 ## load baseline data
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
@@ -339,6 +373,10 @@ upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],si
 
 confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
 
+#Profile intervals
+#mod <- quote(gamlss())
+#prof.term(model=m,criterion="GD",min=-5,max=5,step=1,plot=T)$CI
+
 
 ##
 
@@ -397,7 +435,7 @@ integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[1],sigma=exp(pool_inf_bas
 integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[2],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)
 
 
-#profile interval
+#interval
 lowerCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 estCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
@@ -446,7 +484,7 @@ exp(model25$`97.5 %`))
 #Final change analyses 
 ## ----- ##
 
-## from below 25 to above 25 - Revise the model formulation to see if it makes sense!
+## from below 25 to above 25
 model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
@@ -479,9 +517,9 @@ hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupati
 
 
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
-m <- lm(difference/as.numeric(followup_time)~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base")]))
+m <- lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
-model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(difference/as.numeric(followup_time)~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 
 cbind(model_summary_diff$estimate[1:4],model_summary_diff$`2.5 %`[1:4],model_summary_diff$`97.5 %`[1:4])
 
