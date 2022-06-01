@@ -33,14 +33,17 @@ setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputat
 
 
 ## load tracking data 
-subject_tracking_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
+subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
 subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_four_clusters.csv")
 
 ## Mapping compositions to R^(D-1)
-SBP6 <- matrix(c(1,1,1,-1,-1,-1,1,-1,-1,0,0,0,0,0,0,1,1,-1,0,1,-1,0,0,0,0,0,0,1,-1,0),byrow=T,nrow=5,ncol=6)
-SBP4 <- matrix(c(1,1,-1,1,1,1,0,-1,1,-1,0,0),byrow=T,nrow=3,ncol=4)
+SBP6 <- matrix(c(1,-1,-1,-1,-1,-1,0,-1,-1,1,1,1,0,-1,1,0,0,0,0,0,0,1,1,-1,0,0,0,1,-1,0),byrow=T,nrow=5,ncol=6)
+## Coefficients are: Intercept, No activity vs rest, little activity vs more activity, little offset vs little onset, moderate activity vs much activity, moderate offset vs moderate onset
+SBP4 <- matrix(c(1,1,-1,1,1,-1,0,1,1,0,0,-1),byrow=T,nrow=3,ncol=4)
+## Coefficients are: Intercept, No activity vs rest, little activity vs more activity, offset with activity vs onset with activity
 
-X6 <- subject_tracking_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob")]
+
+X6 <- subject_tracking_six_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob")]
 X4 <- subject_tracking_four_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob")]
 
 Phi.generator <- function(X) {
@@ -68,6 +71,22 @@ clrX4 <- ilrX4 %*% Phi4
 ## The clr coordinates should not be used as covariates in regression models as they will lead to singular covariance matrices, as they are constrained to have component sums zero and thus are not coefficients with respect to a basis of the simplex space.
 
 ## We may afterwards back-transform fitted coefficients to coefficients in the original simplex space, thereby getting coefficients associated with each component.
+
+subject_tracking_six_clusters$ilr1 <- ilrX6[,1]
+subject_tracking_six_clusters$ilr2 <- ilrX6[,2]
+subject_tracking_six_clusters$ilr3 <- ilrX6[,3]
+subject_tracking_six_clusters$ilr4 <- ilrX6[,4]
+subject_tracking_six_clusters$ilr5 <- ilrX6[,5]
+
+subject_tracking_four_clusters$ilr1 <- ilrX4[,1]
+subject_tracking_four_clusters$ilr2 <- ilrX4[,2]
+subject_tracking_four_clusters$ilr3 <- ilrX4[,3]
+
+## Collecting the two clusterings in one file
+
+subject_tracking_clusters <- left_join(subject_tracking_six_clusters,subject_tracking_four_clusters[,c("userid","cluster","cluster1prob","cluster2prob","cluster3prob","cluster4prob","description","state0prob","state1prob","state2prob","state3prob","ilr1","ilr2","ilr3")],by="userid")
+subject_tracking_clusters <- rename(subject_tracking_clusters,ilr1 = ilr1.x, ilr2=ilr2.x, ilr3=ilr3.x,cluster1prob=cluster1prob.x,cluster2prob=cluster2prob.x,cluster3prob=cluster3prob.x,cluster4prob=cluster4prob.x,
+                                    state0prob=state0prob.x,state1prob=state1prob.x,state2prob=state2prob.x,state3prob=state3prob.x,cluster=cluster.x,description=description.x)
 
 ## load baseline data
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
@@ -545,8 +564,17 @@ test_Tnum <- summary(pool(test_num), conf.int=T)
 
 #BMI indicators
 
-summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+
+clr.beta <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6
+#clr.beta = log(beta/gm(beta)), and so contrasts between clr.beta entries are contrasts between log(beta) entries.
+
+beta <- exp(summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6)#/sum(exp(summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6))
+#Now we can get contrasts between beta's in some simplex - does the particular version of the simplex matter?
+
+## How should we present the contrast parameters?
+
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 
 #m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ 1,
 #            nu.formula = ~ 1,weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
