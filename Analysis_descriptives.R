@@ -1,3 +1,5 @@
+
+
 #----------------------------------------------------------------------
 ## author: Thea Otte Andersen
 ## created: 17 February 2022
@@ -30,41 +32,77 @@ table(base_data$mobileUseNight, useNA = "always")
 base_data <- subset(base_data, mobilephone!="No mobile phone")
 table(base_data$mobilephone, useNA = "always")
 
-## self-reported smartphone profiles
+## rubins rules til mean(sd)
+estimate.pooler.unitary <- function(coef,sd){
+  n_col <- length(coef)
+  
+  coefs <- mean(coef)
+  sds <- sqrt(mean(sd^2)+(1+1/n_col)*sum((coef-coefs)^2)/(n_col-1))
+  df <- data.frame("estimate"=coefs,"sd"=sds,"lower.CI"=coefs-1.96*sds,"upper.CI"=coefs+1.96*sds)
+  return(df)
+}
+
+## self-reported night-time smartphone use and smartphone use before sleep onset
 publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
-publish(univariateTable( ~ mobileCheck,data=base_data, column.percent=TRUE))
-publish(univariateTable( ~ pmpuScale,data=base_data, column.percent=TRUE))
-summary(base_data$pmpuScale)
+base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
+
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
-
-base_data$selfScore <- ((base_data$mobileUseBeforeSleep=="5-7 times per week")*4+(base_data$mobileUseBeforeSleep=="2-4 times per week")*3+(base_data$mobileUseBeforeSleep=="Once a week")*3+(base_data$mobileUseBeforeSleep=="Every month or less")*2+(base_data$mobileUseBeforeSleep=="Never")*1+
-  (base_data$mobileUseNight=="Every night or almost every night")*4+(base_data$mobileUseNight=="A few times a week")*3+(base_data$mobileUseNight=="A few times a month or less")*2+(base_data$mobileUseNight=="Never")*1+
-  (base_data$mobileCheck==">20 times per hour")*4+(base_data$mobileCheck=="11-20 times per hour")*4+(base_data$mobileCheck=="5-10 times per hour")*3+(base_data$mobileCheck=="1-4 times per hour")*2+(base_data$mobileCheck=="Every 2nd hour")*2+(base_data$mobileCheck=="Several times per day")*1+(base_data$mobileCheck=="Once a day")*1+
-  (base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4)-4
-summary(base_data$selfScore)
-base_data$selfScore <- as.numeric(base_data$selfScore)
-
-table(base_data$selfScore, useNA="always")
-base_data$selfScoreCat<-NA
-base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
-base_data$selfScoreCat[base_data$selfScore>=4]="2"
-base_data$selfScoreCat[base_data$selfScore>=6]="3"
-base_data$selfScoreCat[base_data$selfScore>=8]="4"
-table(base_data$selfScoreCat,useNA="always")/25
-base_data$selfScoreCat <- as.factor(base_data$selfScoreCat)
-prop.table(table(base_data$selfScoreCat,useNA="always")/25 )
+base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
 
 ## variables in table 1 (total)
 ## age
 publish(univariateTable( ~ age,data=base_data, column.percent=TRUE))
-#table(base_data$age)
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i)$age)
+  sdev[i] <- sd(subset(base_data,imputation==i)$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
 
 ## SD for pooled mean age
+## SD for Never
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Never")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Never")$age) 
+}
 
-table(base_data$imputation)
-sqrt( mean(aggregate(subset(base_data,imputation!=0)$age,by=list(subset(base_data,imputation!=0)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0)$age,by=list(subset(base_data,imputation!=0)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0)$age))^2)/19
-)
+estimate.pooler.unitary(m,sdev)
 
+## SD for a few times a month
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## SD for "a few times a week"
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## every night or almost every night
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+##
 
 ## gender
 table(base_data$gender, useNA="always")/25
@@ -79,52 +117,112 @@ prop.table(table(base_data$education))
 table(base_data$occupation, useNA="always")/25
 prop.table(table(base_data$occupation)/25)
 
-## table 1 according to subjective smartphone behavior profiles
-table(base_data$selfScoreCat, useNA="always")/25
-prop.table(table(base_data$selfScoreCat)/25)
+## table 1 according to night-time smartphone use
+table(base_data$mobileUseNight, useNA="always")/25
+prop.table(table(base_data$mobileUseNight)/25)
 
 ## age ## how to calculate SD for each category??
-publish(univariateTable(selfScoreCat ~ age,data=base_data, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ age,data=base_data, column.percent=TRUE))
 
-## SD for risk profiles 1
-sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==1)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==1)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==1)$age))^2)/25
-)
+## SD for Never
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Never")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Never")$age) 
+}
 
-## SD for risk profile 2
-sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==2)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==2)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==2)$age))^2)/25
-)
+estimate.pooler.unitary(m,sdev)
 
-## SD for risk profile 3
-sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==3)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==3)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==3)$age))^2)/25
-)
+## age and SD for every month
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$age) 
+}
 
-## SD for risk profile 4
-sqrt( 
-  mean(aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=var)$x)+sum((aggregate(subset(base_data,imputation!=0 & selfScoreCat==4)$age,by=list(subset(base_data,imputation!=0 & selfScoreCat==4)$imputation),FUN=mean)$x-mean(subset(base_data,imputation!=0 & selfScoreCat==4)$age))^2)/25
-)
+estimate.pooler.unitary(m,sdev)
+
+## every week
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## every night or almost every night
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$age)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$age) 
+}
+
+estimate.pooler.unitary(m,sdev)
 
 ## gender
-publish(univariateTable(selfScoreCat ~ gender,data=base_data, column.percent=TRUE))
-table(base_data$selfScoreCat, base_data$gender)/25
+publish(univariateTable(mobileUseNight ~ gender,data=base_data, column.percent=TRUE))
+table(base_data$mobileUseNight, base_data$gender)/25
 
 ## education
-table(base_data$selfScoreCat, base_data$education)/25
-publish(univariateTable(selfScoreCat ~ education,data=base_data, column.percent=TRUE))
+table(base_data$mobileUseNight, base_data$education)/25
+publish(univariateTable(mobileUseNight ~ education,data=base_data, column.percent=TRUE))
 
 ## occupation
-publish(univariateTable(selfScoreCat ~ occupation,data=base_data, column.percent=TRUE))
+table(base_data$mobileUseNight, base_data$occupation)/25
+publish(univariateTable(mobileUseNight ~ occupation,data=base_data, column.percent=TRUE))
 
 ## BMI 
 table(base_data$bmi, useNA="always")
 base_data$bmi<- gsub(",", ".", base_data$bmi)
 base_data$bmi <- as.numeric(base_data$bmi)
 
-publish(univariateTable(selfScoreCat ~ bmi,data=base_data, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ bmi,data=base_data, column.percent=TRUE))
 
-## få SD for BMI
+## SD for Never (bmi)
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Never")$bmi)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Never")$bmi) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## SD for every month (bmi)
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$bmi)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a month or less")$bmi) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## SD for every week (bmi)
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$bmi)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="A few times a week")$bmi) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
+## SD for every night or almost every night (bmi)
+m <- numeric(0)
+sdev <- numeric(0)
+for (i in 1:25){
+  m[i] <- mean(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$bmi)
+  sdev[i] <- sd(subset(base_data,imputation==i & mobileUseNight=="Every night or almost every night")$bmi) 
+}
+
+estimate.pooler.unitary(m,sdev)
+
 
 ## bmi >=25
 base_data$bmiCat[base_data$bmi<25] <- "<25"
@@ -132,8 +230,9 @@ base_data$bmiCat[base_data$bmi>=25 & base_data$bmi<30] <- "25-30"
 base_data$bmiCat[base_data$bmi>=30] <- ">=30"
 table(base_data$bmiCat)/25
 prop.table(table(base_data$bmiCat))
-table(base_data$selfScoreCat, base_data$bmiCat)/25
-publish(univariateTable(selfScoreCat ~ bmiCat,data=base_data, column.percent=TRUE))
+table(base_data$mobileUseNight, base_data$bmiCat)/25
+publish(univariateTable(mobileUseNight ~ bmiCat,data=base_data, column.percent=TRUE))
+
 # --------------------------------------------------------------------------- ##
 
 ## Population Sample
@@ -146,10 +245,10 @@ popu <- subset(popu,imputation!=0)
 ## load tracking data subjects
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data")
 #tracking <- read.table("subject_tracking_clusters.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
-tracking_popu <- subset(subject_tracking_clusters, random==1)
+#tracking_popu <- subset(subject_tracking_clusters, random==1)
 
-popuAlt <- merge(tracking_popu, popu, by="userid")
-popuAlt <- subset(popuAlt,imputation!=0)
+#popuAlt <- merge(tracking_popu, popu, by="userid")
+#popuAlt <- subset(popuAlt,imputation!=0)
 
 ## distribution in only survey data
 ## age distribution
@@ -182,22 +281,13 @@ popu$bmiCat[popu$bmi>=30] <- ">=30"
 table(popu$bmiCat, useNA="always")/25
 prop.table(table(popu$bmiCat, useNA="always")/25)
 
-## self-reported smartphone profiles
-summary(base_data$mobileCheck)
-popu$selfScore <- ((popu$mobileUseBeforeSleep=="5-7 times per week")*4+(popu$mobileUseBeforeSleep=="2-4 times per week")*3+(popu$mobileUseBeforeSleep=="Once a week")*3+(popu$mobileUseBeforeSleep=="Every month or less")*2+(popu$mobileUseBeforeSleep=="Never")*1+
-  (popu$mobileUseNight=="Every night or almost every night")*4+(popu$mobileUseNight=="A few times a week")*3+(popu$mobileUseNight=="A few times a month or less")*2+(popu$mobileUseNight=="Never")*1+
-  (popu$mobileCheck==">20 times an hour")*4+(popu$mobileCheck=="11-20 times an hour")*4+(popu$mobileCheck=="5-10 times an hour")*3+(popu$mobileCheck=="1-4 times an hour")*2+(popu$mobileCheck=="Every 2nd hour")*2+(popu$mobileCheck=="Several times a day")*1+(popu$mobileCheck=="Once a day or less")*1+
-  (popu$pmpuScale<14)*1+(popu$pmpuScale>=14 & popu$pmpuScale<17)*2+(popu$pmpuScale>=17 & popu$pmpuScale<19)*3+(popu$pmpuScale>=19)*4)-4
-summary(popu$selfScore)
+## self-reported smartphone use before sleep onset
+table(popu$mobileUseBeforeSleep, useNA="always")/25
+publish(univariateTable( ~ mobileUseBeforeSleep,data=popu, column.percent=TRUE))
 
-table(popu$selfScore, useNA="always")
-popu$selfScoreCat[!is.na(popu$selfScore)] <- "1"
-popu$selfScoreCat[popu$selfScore>=4]="2"
-popu$selfScoreCat[popu$selfScore>=6]="3"
-popu$selfScoreCat[popu$selfScore>=8]="4"
-table(popu$selfScoreCat,useNA="always")/25 
-popu$selfScoreCat <- as.factor(popu$selfScoreCat)
-prop.table(table(popu$selfScoreCat,useNA="always"))
+## night-time smartphone use
+table(popu$mobileUseNight, useNA="always")/25
+publish(univariateTable( ~ mobileUseNight,data=popu, column.percent=TRUE))
 
 # --------------------------------------------------------------------------- ##
   
@@ -207,12 +297,10 @@ CSS <- read.csv2("Citizen Science Sample/imp_citizenScience.csv")
 table(CSS$imputation)
 CSS <- subset(CSS,imputation!=0)
 
-tracking_CSS <- subset(subject_tracking_clusters, followup==1)
-table(subject_tracking_clusters$followup)
+#tracking_CSS <- subset(subject_tracking_clusters, followup==1)
+#table(subject_tracking_clusters$followup)
   
 CSSAlt <- merge(tracking_CSS, CSS, by="userid")
-
-table(CSS$responseDate)
 
 ## distribution only in survey data
 
@@ -238,27 +326,19 @@ prop.table(table(CSS$education))
 table(CSS$occupation, useNA="always")/25
 prop.table(table(CSS$occupation))
 
-## risk profiles of self-reported smartphone behavior
-## self-reported smartphone profiles
-table(CSS$mobileCheck)
-CSS$selfScore <- ((CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileUseBeforeSleep=="2-4 times per week")*3+(CSS$mobileUseBeforeSleep=="Once a week")*3+(CSS$mobileUseBeforeSleep=="Every month or less")*2+(CSS$mobileUseBeforeSleep=="Never")*1+
-  (CSS$mobileUseNight=="Every night or almost every night")*4+(CSS$mobileUseNight=="A few times a week")*3+(CSS$mobileUseNight=="A few times a month or less")*2+(CSS$mobileUseNight=="Never")*1+
-  (CSS$mobileCheck==">20 times an hour")*4+(CSS$mobileCheck=="11-20 times an hour")*4+(CSS$mobileCheck=="5-10 times an hour")*3+(CSS$mobileCheck=="1-4 times an hour")*2+(CSS$mobileCheck=="Every 2nd hour")*2+(CSS$mobileCheck=="Several times a day")*1+(CSS$mobileCheck=="Once a day or less")*1+
-  (CSS$pmpuScale<14)*1+(CSS$pmpuScale>=14 & CSS$pmpuScale<17)*2+(CSS$pmpuScale>=17 & CSS$pmpuScale<19)*3+(CSS$pmpuScale>=19)*4)-4
-summary(CSS$selfScore)
 
-table(CSS$selfScore, useNA="always")
-CSS$selfScoreCat[!is.na(CSS$selfScore)] <- "1"
-CSS$selfScoreCat[CSS$selfScore>=4]="2"
-CSS$selfScoreCat[CSS$selfScore>=6]="3"
-CSS$selfScoreCat[CSS$selfScore>=8]="4"
-table(CSS$selfScoreCat,useNA="always")/25 
-prop.table(table(CSS$selfScoreCat,useNA="always"))
+## self-reported smartphone use before sleep onset
+table(CSS$mobileUseBeforeSleep, useNA="always")/25
+publish(univariateTable( ~ mobileUseBeforeSleep,data=CSS, column.percent=TRUE))
+
+## night-time smartphone use
+table(CSS$mobileUseNight, useNA="always")/25
+publish(univariateTable( ~ mobileUseNight,data=CSS, column.percent=TRUE))
 
 ## bmi
 table(CSS$bmi, useNA="always")
 CSS$bmiCat[CSS$bmi<25] <- "<25"
-CSS$bmiCat[CSS$bmi>=25 & popu$bmi<30] <- "25-30"
+CSS$bmiCat[CSS$bmi>=25 & CSS$bmi<30] <- "25-30"
 CSS$bmiCat[CSS$bmi>=30] <- ">=30"
 table(CSS$bmiCat, useNA="always")/25
 prop.table(table(CSS$bmiCat, useNA="always")/25)
