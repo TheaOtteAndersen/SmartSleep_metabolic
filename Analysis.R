@@ -31,7 +31,6 @@ estimate.pooler <- function(coef,sd){
 #Reading in the data
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
 
-
 ## load tracking data 
 subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
 subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_four_clusters.csv")
