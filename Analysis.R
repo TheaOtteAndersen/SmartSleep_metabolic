@@ -538,6 +538,8 @@ hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupati
 m <- lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
 model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+#Does it make sense to include tracking information at follow up, or to include self score at followup as well?
+#(reduce noise in measurement?)
 
 cbind(model_summary_diff$estimate[1:4],model_summary_diff$`2.5 %`[1:4],model_summary_diff$`97.5 %`[1:4])
 
