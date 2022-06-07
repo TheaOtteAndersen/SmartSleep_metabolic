@@ -807,9 +807,9 @@ lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS
 estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[6,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[6,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-confints_PopTrackNoS_mpSix <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
-                              c(estClust1,estClust2,estClust3,estClust4,estClust5,estClust6),
-                              c(upperClust1,upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+confints_PopTrackNoS_mpSix <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
+                              c(estClust2,estClust3,estClust4,estClust5,estClust6),
+                              c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction
 
 m <- gamlss(bmi~(cluster+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
@@ -851,9 +851,9 @@ lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS
 estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-confints_PopTrackNoS_mpFour <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4),
-                              c(estClust1,estClust2,estClust3,estClust4),
-                              c(upperClust1,upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+confints_PopTrackNoS_mpFour <- cbind(c(lowerClust2,lowerClust3,lowerClust4),
+                              c(estClust2,estClust3,estClust4),
+                              c(upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction
 
 m <- gamlss(bmi~(cluster.y+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
