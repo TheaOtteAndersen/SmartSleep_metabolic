@@ -393,13 +393,15 @@ confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCa
 #Because the skewness is constant in covariates, the shift between median and mean is constant in covariates.
 #We can thus simply make a test for trend on the median to get a p value, as median equality <=> mean equality.
 
+# Night:
+
 coefs <- list()
 ses <- list()
 vcovs <- list()
 models <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi ~ as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","mobileUseNight","mobileUseBeforeSleep","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi ~ as.numeric(mobileUseNight)+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","mobileUseNight","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   models[[i]] <- m
   coefs[[i]] <- m_sum[,1]
@@ -407,34 +409,58 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_baseTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_baseTrend$qbar
-pool_inf_baseTrend$ubar
-pool_inf_baseTrend$pval
-
-summary(pool_inf_baseTrend)
+pool_inf_baseTrendNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
 #Going to means:
 
-m$mu.coefficients <- pool_inf_baseTrend$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
+m$mu.coefficients <- pool_inf_baseTrendNight$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
+m$nu.coefficients <- pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
 #interval
-lowerCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendNight)[2,5],sigma=exp(pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendNight)[2,1],sigma=exp(pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendNight)[2,6],sigma=exp(pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+summary(pool_inf_baseTrendNight)$p[2]
 
 
-confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNight),
-                           c(lowerCatTrendBS,estCatTrendBS,upperCatTrendBS))
+# Before:
 
-summary(pool_inf_baseTrend)$p[2]
-summary(pool_inf_baseTrend)$p[3]
+coefs <- list()
+ses <- list()
+vcovs <- list()
+models <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi ~ as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","mobileUseBeforeSleep","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  models[[i]] <- m
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_baseTrendBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+#Going to means:
+
+m$mu.coefficients <- pool_inf_baseTrendBefore$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
+m$nu.coefficients <- pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
+
+#interval
+lowerCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendBefore)[2,5],sigma=exp(pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendBefore)[2,1],sigma=exp(pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendBefore)[2,6],sigma=exp(pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+summary(pool_inf_baseTrendBefore)$p[2]
+
+# Collected trend intervals
+confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNight,summary(pool_inf_baseTrendNight)$p[2]),
+                           c(lowerCatTrendBS,estCatTrendBS,upperCatTrendBS,summary(pool_inf_baseTrendBefore)$p[2]))
+
+
 
 
 # --------------------------------------------------------------------------- ##
@@ -442,30 +468,55 @@ summary(pool_inf_baseTrend)$p[3]
 # --------------------------------------------------------------------------- ##
 
 ## Using the mice package with mids objects
-mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
-mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
-pool(mod30)
-pool(mod25)
+# Night:
+mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
 ## test for trend
-TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-testT <- summary(pool(TEST), conf.int = T)
+TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(mobileUseNight))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+testTNight <- summary(pool(TEST), conf.int = T)
 
-TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-test2 <- summary(pool(TEST2), conf.int = T)
+TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(mobileUseNight))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+test2Night <- summary(pool(TEST2), conf.int = T)
 
 ## OR for BMI>30
-model30 <- summary(pool(mod30),conf.int = T)
-cbind(exp(model30$estimate),
-exp(model30$`2.5 %`),
-exp(model30$`97.5 %`))
+model30Night <- summary(pool(mod30),conf.int = T)
+cbind(exp(model30Night$estimate),
+exp(model30Night$`2.5 %`),
+exp(model30Night$`97.5 %`))
 
 ## OR for BMI >25
-model25 <- summary(pool(mod25), conf.int=T)
-cbind(exp(model25$estimate),
-exp(model25$`2.5 %`),
-exp(model25$`97.5 %`))
+model25Night <- summary(pool(mod25), conf.int=T)
+cbind(exp(model25Night$estimate),
+exp(model25Night$`2.5 %`),
+exp(model25Night$`97.5 %`))
+
+
+# Before:
+
+mod30 <- with(base_data_mids,glm(bmi30~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod25 <- with(base_data_mids,glm(bmi25~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+
+## test for trend
+TEST <- with(base_data_mids,glm((bmi>=30)~(as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+testTBefore <- summary(pool(TEST), conf.int = T)
+
+TEST2 <- with(base_data_mids,glm((bmi>=25)~(as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+test2Before <- summary(pool(TEST2), conf.int = T)
+
+## OR for BMI>30
+model30Before <- summary(pool(mod30),conf.int = T)
+cbind(exp(model30Before$estimate),
+      exp(model30Before$`2.5 %`),
+      exp(model30Before$`97.5 %`))
+
+## OR for BMI >25
+model25Before <- summary(pool(mod25), conf.int=T)
+cbind(exp(model25Before$estimate),
+      exp(model25Before$`2.5 %`),
+      exp(model25Before$`97.5 %`))
+
 
 
 # --------------------------------------------------------------------------- ##
@@ -479,26 +530,31 @@ exp(model25$`97.5 %`))
 #Final change analyses 
 ## ----- ##
 
+# Night:
+
 ## from below 25 to above 25
-model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+model25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 
 ## test for trend
 
-test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-testT25 <- summary(pool(test25), conf.int = T)
+test25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+testT25Night <- summary(pool(test25Night), conf.int = T)
 #anova(test25,model25)
 
 
 ## from below 30 to above 30
-model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+model30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
 
-test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-testT30 <- summary(pool(test30), conf.int=T)
+
+## test for trend
+
+test30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+testT30Night <- summary(pool(test30Night), conf.int = T)
 #anova(test30,model30)
 
 
@@ -506,37 +562,71 @@ testT30 <- summary(pool(test30), conf.int=T)
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
-plot(fitted(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
-     residuals(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
-hist(residuals(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
+plot(fitted(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
+     residuals(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
+hist(residuals(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
 
 
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
 m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
 model_summary_diff_Night <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
-#Does it make sense to include tracking information at follow up, or to include self score at followup as well?
-#(reduce noise in measurement?)
 
 cbind(model_summary_diff_Night$estimate[17:20],model_summary_diff_Night$`2.5 %`[17:20],model_summary_diff_Night$`97.5 %`[17:20])
 
 ## test for trend (mobileUseNight)
-test_num <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
-test_Tnum <- summary(pool(test_num), conf.int=T)
+test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
+test_TnumNight <- summary(pool(test_numNight), conf.int=T)
+
 
 
 # BeforeSleep
+
+## from below 25 to above 25
+model25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
+
+
+## test for trend
+
+test25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+testT25Before <- summary(pool(test25Before), conf.int = T)
+#anova(test25,model25)
+
+
+## from below 30 to above 30
+model30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+
+
+## test for trend
+
+test30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+testT30Before <- summary(pool(test30Before), conf.int = T)
+#anova(test30,model30)
+
+
+
+## Modelling numeric difference in bmi between baseline and followup
+hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
+
+plot(fitted(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
+     residuals(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
+hist(residuals(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
+
+
+#m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
 m <- lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseBeforeSleep.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
 model_summary_diff_Before <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
-#Does it make sense to include tracking information at follow up, or to include self score at followup as well?
-#(reduce noise in measurement?)
 
 cbind(model_summary_diff_Before$estimate[17:21],model_summary_diff_Before$`2.5 %`[17:21],model_summary_diff_Before$`97.5 %`[17:21])
 
-## test for trend (mobileUseBeforeSleep)
-test_num <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
-test_Tnum <- summary(pool(test_num), conf.int=T)
+## test for trend (mobileUseBefore)
+test_numBefore <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseBeforeSleep.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
+test_TnumBefore <- summary(pool(test_numBefore), conf.int=T)
 
 
 #Generally:
