@@ -143,8 +143,6 @@ long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"user
 
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
-
-
 # --------------------------------------------------------------------------- ##
 #Population sample
 
@@ -336,7 +334,7 @@ confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCa
 
 
 
-#trend
+# test for trend
 
 #Because the skewness is constant in covariates, the shift between median and mean is constant in covariates.
 #We can thus simply make a test for trend on the median to get a p value, as median equality <=> mean equality.
@@ -417,7 +415,7 @@ confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNi
 
 ## Using the mice package with mids objects
 
-# Night:
+# smartphone use during the sleep period:
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
@@ -441,7 +439,7 @@ exp(model25Night$`2.5 %`),
 exp(model25Night$`97.5 %`))
 
 
-# Before:
+# Smartphone use Before sleep:
 
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -1134,7 +1132,7 @@ df_ints_mpFour <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp
 names(df_ints_mpFour) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
 
 
-<<<<<<< HEAD
+
 ## night-time smartphone use 
 
 predict.person <- data.frame("age"=18,education="",occupation="Employed")
@@ -1152,7 +1150,7 @@ tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ 
 vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
 wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-=======
+
 ## Self assesment: Night
 
 predict.person <- data.frame("age"=18,education="",occupation="Employed")
@@ -1168,7 +1166,7 @@ tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerid
 vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
 wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
->>>>>>> c299fb137c521a3e6bbb8f5fa24603e9217e3c15
+
 
 df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNight[2,],t_chol_intsNight[2,],tri_intsNight[2,],hba1c_intsNight[2,],dbp_intsNight[2,],sbp_intsNight[2,],wh_intsNight[2,],glu_intsNight[2,],bmi_intsNight[2,]),
                       rbind(hdl_intsNight[3,],ldl_intsNight[3,],vldl_intsNight[3,],t_chol_intsNight[3,],tri_intsNight[3,],hba1c_intsNight[3,],dbp_intsNight[3,],sbp_intsNight[3,],wh_intsNight[3,],glu_intsNight[3,],bmi_intsNight[3,]),
@@ -1178,7 +1176,6 @@ colnames(df_intsNight) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.
 rownames(df_intsNight) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsNight
 
-<<<<<<< HEAD
 ## mobileUseNight and biomarkers
 dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
 glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
@@ -1199,7 +1196,7 @@ df_intsS <- data.frame(rbind(hdl_intS[2,],ldl_intS[2,],vldl_intS[2,],t_chol_intS
 colnames(df_intsS) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
 rownames(df_intsS) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsS
-=======
+
 
 ## Self assesment: Before
 
@@ -1222,4 +1219,4 @@ df_intsBefore <- data.frame(rbind(hdl_intsBefore[2,],ldl_intsBefore[2,],vldl_int
 colnames(df_intsBefore) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
 rownames(df_intsBefore) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsBefore
->>>>>>> c299fb137c521a3e6bbb8f5fa24603e9217e3c15
+
