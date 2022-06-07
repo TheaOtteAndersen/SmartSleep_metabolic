@@ -74,31 +74,13 @@ clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels 
 ## if no mobile phone = NA
 base_data$pmpuScale[base_data$mobilephone=="No mobile phone"] <- NA
 
-## risk profiles for baseline data 
-base_data$selfScore <- (base_data$mobileUseBeforeSleep=="5-7 times per week")*4+(base_data$mobileUseBeforeSleep=="2-4 times per week")*3+(base_data$mobileUseBeforeSleep=="Once a week")*3+(base_data$mobileUseBeforeSleep=="Every month or less")*2+(base_data$mobileUseBeforeSleep=="Never")*1+
-  (base_data$mobileUseNight=="Every night or almost every night")*4+(base_data$mobileUseNight=="A few times a week")*3+(base_data$mobileUseNight=="A few times a month or less")*2+(base_data$mobileUseNight=="Never")*1+
-  (base_data$mobileCheck==">20 times per hour")*4+(base_data$mobileCheck=="11-20 times per hour")*4+(base_data$mobileCheck=="5-10 times per hour")*3+(base_data$mobileCheck=="1-4 times per hour")*2+(base_data$mobileCheck=="Every 2nd hour")*2+(base_data$mobileCheck=="Several times per day")*1+(base_data$mobileCheck=="Once a day")*1+
-  (base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4
-summary(base_data$selfScore[base_data$imputation!=0])
-base_data$selfScoreCat<-NA
-base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
-base_data$selfScoreCat[base_data$selfScore>=8]="2"
-base_data$selfScoreCat[base_data$selfScore>=10]="3"
-base_data$selfScoreCat[base_data$selfScore>=12]="4"
-table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always")/25
-
-# bar chart selfScoreCat 
-ggplot(base_data, aes(x = factor(selfScoreCat))) +
-  geom_bar()
-
 ## tjek risk profiles
 publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
+base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
-publish(univariateTable( ~ mobileCheck,data=base_data, column.percent=TRUE))
-table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4)/20
+base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
 
-publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
-      
+## bmi
 base_data$bmi30 <- (base_data$bmi>=30)
 base_data$bmi25 <- (base_data$bmi>=25)
 
@@ -106,36 +88,12 @@ base_data$bmi25 <- (base_data$bmi>=25)
 
 base_data_mids <- as.mids(base_data,.imp="imputation")
 
-## BMI kategoriseringer ved baseline
-table(base_data$bmi<25, base_data$selfScoreCat)/26
-table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/26
-table(base_data$bmi>=30, base_data$selfScoreCat)/26
-
-table(base_data$bmi<25, base_data$selfScoreCat)/21
-table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
-table(base_data$bmi>=30, base_data$selfScoreCat)/21
-
 
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
 
-## risk profiles for CSS
-CSS$selfScore <- (CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileUseBeforeSleep=="2-4 times per week")*3+(CSS$mobileUseBeforeSleep=="Once a week")*3+(CSS$mobileUseBeforeSleep=="Every month or less")*2+(CSS$mobileUseBeforeSleep=="Never")*1+
-  (CSS$mobileUseNight=="Every night or almost every night")*4+(CSS$mobileUseNight=="A few times a week")*3+(CSS$mobileUseNight=="A few times a month or less")*2+(CSS$mobileUseNight=="Never")*1+
-  (CSS$mobileCheck==">20 times an hour")*4+(CSS$mobileCheck=="11-20 times an hour")*4+(CSS$mobileCheck=="5-10 times an hour")*3+(CSS$mobileCheck=="1-4 times an hour")*2+(CSS$mobileCheck=="Every 2nd hour")*2+(CSS$mobileCheck=="Several times a day")*1+(CSS$mobileCheck=="Once a day or less")*1+
-  (CSS$pmpuScale<=14)*1+(CSS$pmpuScale>14 & CSS$pmpuScale<17)*2+(CSS$pmpuScale>=17 & CSS$pmpuScale<19)*3+(CSS$pmpuScale>=19)*4
-summary(CSS$selfScore[CSS$imputation!=0])
-CSS$selfScoreCat <- NA
-CSS$selfScoreCat[!is.na(CSS$selfScore)]<-"1"
-CSS$selfScoreCat[CSS$selfScore>=8]="2"
-CSS$selfScoreCat[CSS$selfScore>=10]="3"
-CSS$selfScoreCat[CSS$selfScore>=12]="4"
-table(CSS$selfScoreCat[CSS$imputation!=0], useNA="always")
-
-# bar chart selfScoreCat 
-ggplot(CSS, aes(x = factor(selfScoreCat))) +
-  geom_bar()
-
+table(CSS$mobileUseBeforeSleep, useNA="always")
+table(CSS$mobileUseNight, useNA="always")
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
@@ -176,6 +134,7 @@ bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
 #New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
 
+## virker ikke 07062022
 long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=rep(bmi_followup$userid,2),"sample_weights"=rep(bmi_followup$sample_weights.x,2),"gender"=rep(bmi_followup$gender.y,2),"age"=rep(bmi_followup$age.y,2),
                         education=rep(bmi_followup$education.y,2),occupation=rep(bmi_followup$occupation.y,2),selfScoreCat = rep(bmi_followup$selfScoreCat.y,2),"followup"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),
                         "imputation"=rep(bmi_followup$imputation,2),"time" = c(rep(0,length(bmi_followup$bmi.base)),bmi_followup$followup_time))
@@ -184,25 +143,12 @@ long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"user
 
 long_data_mids <- as.mids(long_data,.imp="imputation")
 
-
-
 # --------------------------------------------------------------------------- ##
 #Population sample
 
-## risk profiles for population sample
-pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
-  (pop_data$mobileUseNight=="Every night or almost every night")*4+(pop_data$mobileUseNight=="A few times a week")*3+(pop_data$mobileUseNight=="A few times a month or less")*2+(pop_data$mobileUseNight=="Never")*1+
-  (pop_data$mobileCheck==">20 times an hour")*4+(pop_data$mobileCheck=="11-20 times an hour")*4+(pop_data$mobileCheck=="5-10 times an hour")*3+(pop_data$mobileCheck=="1-4 times an hour")*2+(pop_data$mobileCheck=="Every 2nd hour")*2+(pop_data$mobileCheck=="Several times a day")*1+(pop_data$mobileCheck=="Once a day or less")*1+
-  (pop_data$pmpuScale<=14)*1+(pop_data$pmpuScale>14 & pop_data$pmpuScale<17)*2+(pop_data$pmpuScale>=17 & pop_data$pmpuScale<19)*3+(pop_data$pmpuScale>=19)*4
-summary(pop_data$selfScore[pop_data$imputation!=0])
-
-## categorise selfScoreCat?
-pop_data$selfScoreCat <- NA
-pop_data$selfScoreCat[!is.na(pop_data$selfScore)]<-"1"
-pop_data$selfScoreCat[pop_data$selfScore>=8]="2"
-pop_data$selfScoreCat[pop_data$selfScore>=10]="3"
-pop_data$selfScoreCat[pop_data$selfScore>=12]="4"
-table(pop_data$selfScoreCat[pop_data$imputation!=0])
+##
+table(pop_data$mobileUseNight)
+table(pop_data$mobileUseBeforeSleep)
 
 ## merge tracking and survey data for population sample
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
@@ -275,9 +221,9 @@ hist(base_data$weight,breaks=40)
 #### BASE POPULATION
 
 ## test kontinuert bmi
-plot(fitted(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))))
-hist(residuals(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),xlim=c(-20,20),breaks=200)
-hist(simulate(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1)))$sim_1,breaks=40) #The bell-shape is not that well suited
+#plot(fitted(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),residuals(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))))
+#hist(residuals(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),xlim=c(-20,20),breaks=200)
+#hist(simulate(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1)))$sim_1,breaks=40) #The bell-shape is not that well suited
 
 #Conclusion: The lm is not by itself appropriate for describing the distribution of BMI.
 
@@ -287,7 +233,7 @@ hist(simulate(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=s
 
 #Confidence intervals and estimates for continuous BMI:
 
-#MobileUseNight:
+## MobileUseNight and bmi in baseline sample:
 
 coefs <- list()
 ses <- list()
@@ -388,7 +334,7 @@ confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCa
 
 
 
-#trend
+# test for trend
 
 #Because the skewness is constant in covariates, the shift between median and mean is constant in covariates.
 #We can thus simply make a test for trend on the median to get a p value, as median equality <=> mean equality.
@@ -469,7 +415,7 @@ confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNi
 
 ## Using the mice package with mids objects
 
-# Night:
+# smartphone use during the sleep period:
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
@@ -493,7 +439,7 @@ exp(model25Night$`2.5 %`),
 exp(model25Night$`97.5 %`))
 
 
-# Before:
+# Smartphone use Before sleep:
 
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -533,19 +479,60 @@ cbind(exp(model25Before$estimate),
 # Night:
 
 ## from below 25 to above 25
+
+## smartphone use before sleep:
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+
 model25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
+## test for trend (smartphone use before sleep)
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+testT25 <- summary(pool(test25), conf.int = T)
+#anova(test25,model25)
 
+## smarpthone use during the sleep period
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
+
+## test for trend (smartphone use during the sleep period)
 ## test for trend
+
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y))+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial)
+testT25 <- summary(pool(test25), conf.int = T)
+
 
 test25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25Night <- summary(pool(test25Night), conf.int = T)
+
 #anova(test25,model25)
 
 
+
 ## from below 30 to above 30
+
+
+## smartphone use before sleep
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+testT30 <- summary(pool(test30), conf.int=T)
+#anova(test30,model30)
+
+## smartphone use during the sleep period
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y))+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial)
+testT30 <- summary(pool(test30), conf.int=T)
+
 model30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 model_summary30Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
@@ -555,6 +542,7 @@ exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summa
 
 test30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 testT30Night <- summary(pool(test30Night), conf.int = T)
+
 #anova(test30,model30)
 
 
@@ -566,7 +554,7 @@ plot(fitted(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupatio
      residuals(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
 hist(residuals(lm(difference~(mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
 
-
+## smartphone use during sleep period and changes in BMI:
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
 m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
@@ -579,6 +567,9 @@ test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
+
+
+## smartphone use Before Sleep and changes in BMI
 
 # BeforeSleep
 
@@ -618,6 +609,7 @@ hist(residuals(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+
 
 
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
+
 m <- lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseBeforeSleep.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
 model_summary_diff_Before <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
@@ -979,41 +971,17 @@ table(clinical_sample$bmi.clinical)
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
-# --------------------------------------------------------------------------- ##
-## SelfScoreCat
 
-clinical_sample$selfScore <- (clinical_sample$mobileUseBeforeSleep=="5-7 times per week")*4+(clinical_sample$mobileUseBeforeSleep=="2-4 times per week")*3+(clinical_sample$mobileUseBeforeSleep=="Once a week")*3+(clinical_sample$mobileUseBeforeSleep=="Every month or less")*2+(clinical_sample$mobileUseBeforeSleep=="Never")*1+
-  (clinical_sample$mobileUseNight=="Every night or almost every night")*4+(clinical_sample$mobileUseNight=="A few times a week")*3+(clinical_sample$mobileUseNight=="A few times a month or less")*2+(clinical_sample$mobileUseNight=="Never")*1+
-  (clinical_sample$mobileCheck==">20 times an hour")*4+(clinical_sample$mobileCheck=="11-20 times an hour")*4+(clinical_sample$mobileCheck=="5-10 times an hour")*3+(clinical_sample$mobileCheck=="1-4 times an hour")*2+(clinical_sample$mobileCheck=="Every 2nd hour")*2+(clinical_sample$mobileCheck=="Several times a day")*1+(clinical_sample$mobileCheck=="Once a day or less")*1+
-  (clinical_sample$pmpuScale<=14)*1+(clinical_sample$pmpuScale>14 & clinical_sample$pmpuScale<17)*2+(clinical_sample$pmpuScale>=17 & clinical_sample$pmpuScale<19)*3+(clinical_sample$pmpuScale>=19)*4
-summary(clinical_sample$selfScore[clinical_sample$imputation!=0])
-clinical_sample$selfScoreCat <- NA
-clinical_sample$selfScoreCat[!is.na(clinical_sample$selfScore)]<-"1"
-clinical_sample$selfScoreCat[clinical_sample$selfScore>=8]="2"
-clinical_sample$selfScoreCat[clinical_sample$selfScore>=10]="3"
-clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
-table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0],useNA="always")/25
-clinical_sample$selfScoreCat <- as.factor(clinical_sample$selfScoreCat)
 
 # --------------------------------------------------------------------------- ##
 ## descriptive of clinical sample
 ## age
-publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))/25
+publish(univariateTable(mobileUseNight ~ age.x,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ age.x,data=clinical_sample, column.percent=TRUE))
 clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 
 ## BMI
-publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
-
-## categorize BMI
-clinical_sample$bmiCat[clinical_sample$bmi.clinical<25] <- "<25"
-clinical_sample$bmiCat[clinical_sample$bmi.clinical>=25 & clinical_sample$bmi.clinical<30] <- "25-30"
-clinical_sample$bmiCat[clinical_sample$bmi.clinical>=30] <- ">=30"
-table(clinical_sample$bmiCat, useNA="always")/26
-prop.table(table(clinical_sample$bmiCat, useNA="always"))
-table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always")/25
-prop.table(table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always"))
-publish(univariateTable(selfScoreCat ~ bmiCat,data=clinical_sample, column.percent=TRUE))
-
+publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
 
@@ -1022,8 +990,6 @@ publish(univariateTable(selfScoreCat ~ bmiCat,data=clinical_sample, column.perce
 clinical_sample$bmi <- as.numeric(clinical_sample$bmi.clinical)
 clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi.clinical>=25)
 clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
-
-publish(univariateTable(selfScoreCat ~ bmi25,data=clinical_sample, column.percent=TRUE))
 
 ## age at clinical examination (OBS. NOGET ER GALT I DENNE VARIABLE)
 table(clinical_sample$age.y, useNA="always")
@@ -1166,6 +1132,25 @@ df_ints_mpFour <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp
 names(df_ints_mpFour) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
 
 
+
+## night-time smartphone use 
+
+predict.person <- data.frame("age"=18,education="",occupation="Employed")
+
+## mobileUseBeforeSleep and biomarkers
+
+dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
+sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+
 ## Self assesment: Night
 
 predict.person <- data.frame("age"=18,education="",occupation="Employed")
@@ -1182,6 +1167,7 @@ vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mob
 wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
+
 df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNight[2,],t_chol_intsNight[2,],tri_intsNight[2,],hba1c_intsNight[2,],dbp_intsNight[2,],sbp_intsNight[2,],wh_intsNight[2,],glu_intsNight[2,],bmi_intsNight[2,]),
                       rbind(hdl_intsNight[3,],ldl_intsNight[3,],vldl_intsNight[3,],t_chol_intsNight[3,],tri_intsNight[3,],hba1c_intsNight[3,],dbp_intsNight[3,],sbp_intsNight[3,],wh_intsNight[3,],glu_intsNight[3,],bmi_intsNight[3,]),
                       rbind(hdl_intsNight[4,],ldl_intsNight[4,],vldl_intsNight[4,],t_chol_intsNight[4,],tri_intsNight[4,],hba1c_intsNight[4,],dbp_intsNight[4,],sbp_intsNight[4,],wh_intsNight[4,],glu_intsNight[4,],bmi_intsNight[4,]))
@@ -1189,6 +1175,27 @@ df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNi
 colnames(df_intsNight) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
 rownames(df_intsNight) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsNight
+
+## mobileUseNight and biomarkers
+dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
+sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+
+df_intsS <- data.frame(rbind(hdl_intS[2,],ldl_intS[2,],vldl_intS[2,],t_chol_intS[2,],tri_intS[2,],hba1c_intS[2,],dbp_intS[2,],sbp_intS[2,],wh_intS[2,],glu_intS[2,],bmi_intS[2,]),
+                       rbind(hdl_intS[3,],ldl_intS[3,],vldl_intS[3,],t_chol_intS[3,],tri_intS[3,],hba1c_intS[3,],dbp_intS[3,],sbp_intS[3,],wh_intS[3,],glu_intS[3,],bmi_intS[3,]),
+                       rbind(hdl_intS[4,],ldl_intS[4,],vldl_intS[4,],t_chol_intS[4,],tri_intS[4,],hba1c_intS[4,],dbp_intS[4,],sbp_intS[4,],wh_intS[4,],glu_intS[4,],bmi_intS[4,]))
+
+colnames(df_intsS) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
+rownames(df_intsS) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
+df_intsS
 
 
 ## Self assesment: Before
@@ -1212,3 +1219,4 @@ df_intsBefore <- data.frame(rbind(hdl_intsBefore[2,],ldl_intsBefore[2,],vldl_int
 colnames(df_intsBefore) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
 rownames(df_intsBefore) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsBefore
+
