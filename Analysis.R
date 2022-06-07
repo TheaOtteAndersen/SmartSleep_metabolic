@@ -40,8 +40,8 @@ subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleani
 
 ## Collecting the two clusterings in one file
 
-subject_tracking_clusters <- left_join(subject_tracking_six_clusters,subject_tracking_four_clusters[,c("userid","cluster","cluster1prob","cluster2prob","cluster3prob","cluster4prob","description","state0prob","state1prob","state2prob","state3prob","ilr1","ilr2","ilr3")],by="userid")
-subject_tracking_clusters <- rename(subject_tracking_clusters,ilr1 = ilr1.x, ilr2=ilr2.x, ilr3=ilr3.x,cluster1prob=cluster1prob.x,cluster2prob=cluster2prob.x,cluster3prob=cluster3prob.x,cluster4prob=cluster4prob.x,
+subject_tracking_clusters <- left_join(subject_tracking_six_clusters,subject_tracking_four_clusters[,c("userid","cluster","cluster1prob","cluster2prob","cluster3prob","cluster4prob","description","state0prob","state1prob","state2prob","state3prob")],by="userid")
+subject_tracking_clusters <- rename(subject_tracking_clusters,cluster1prob=cluster1prob.x,cluster2prob=cluster2prob.x,cluster3prob=cluster3prob.x,cluster4prob=cluster4prob.x,
                                     state0prob=state0prob.x,state1prob=state1prob.x,state2prob=state2prob.x,state3prob=state3prob.x,cluster=cluster.x,description=description.x)
 
 ## load baseline data
@@ -689,7 +689,7 @@ confints_PopTrackNoT <- cbind(c(lowerNight2,lowerNight3,lowerNight4),
                                  c(upperNight2,upperNight3,upperNight4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-#Trends:
+#Trend:
 coefs <- list()
 ses <- list()
 vcovs <- list()
@@ -750,8 +750,7 @@ confints_PopTrackNoT <- cbind(c(lowerBS2,lowerBS3,lowerBS4,lowerBS5),
                               c(estBS2,estBS3,estBS4,estBS5),
                               c(upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-
-#Trends:
+#Trend:
 coefs <- list()
 ses <- list()
 vcovs <- list()
