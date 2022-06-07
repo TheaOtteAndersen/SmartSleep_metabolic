@@ -38,140 +38,11 @@ setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputat
 subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
 subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_four_clusters.csv")
 
-## Mapping compositions to R^(D-1)
-SBP6 <- matrix(c(1,-1,-1,-1,-1,-1,0,-1,-1,1,1,1,0,-1,1,0,0,0,0,0,0,1,1,-1,0,0,0,1,-1,0),byrow=T,nrow=5,ncol=6)
-## Coefficients are: Intercept, No activity vs rest (1 vs 2,3,4,5,6), little activity vs more activity, little offset vs little onset, moderate activity vs much activity, moderate offset vs moderate onset
-SBP4 <- matrix(c(1,1,-1,1,1,-1,0,1,1,0,0,-1),byrow=T,nrow=3,ncol=4)
-## Coefficients are: Intercept, No activity vs rest (1 vs 2,3,4), little activity vs more activity, offset with activity vs onset with activity
-
-
-X6 <- subject_tracking_six_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob")]
-X4 <- subject_tracking_four_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob")]
-
-Phi.generator <- function(X) { #Orthonormal basis
-  K <- nrow(X)
-  L <- ncol(X)
-  A <- matrix(rep(NA,K*L),nrow = K, ncol = L)
-  for (i in 1:K){
-    r <- sum(X[i,]>0)
-    s <- sum(X[i,]<0)
-    A[i,] <- X[i,]*sqrt((r*s)/(r+s))*((X[i,]>0)*1/r + (X[i,]<0)*1/s)
-  }
-  return(A)
-}
-
-Orthogonal.coordinate.generator <- function(X,l) { #Inputs data and base index, outputs coordinates in a system with orthogonal basis elements
-  D <- ncol(X)
-  M <- nrow(X)
-  A <- matrix(rep(NA,(D-1)*M),ncol = D-1, nrow = M)
-  for (m in 1:M){
-  for (i in 1:(D-1)){
-    A[m,i] <- log2(unlist(c(X[m,l],X[m,-l]))/(prod(unlist(c(X[m,l],X[m,-l]))[(i+1):D])^(1/(D-i))))[i]
-  }
-  }
-  return(A)
-}
-
-Phi6 <- Phi.generator(SBP6)
-Phi4 <- Phi.generator(SBP4)
-
-ilrX6 <- as.matrix(log(X6)) %*% t(Phi6)
-ilrX4 <- as.matrix(log(X4)) %*% t(Phi4)
-
-clrX6 <- ilrX6 %*% Phi6
-clrX4 <- ilrX4 %*% Phi4
-
-## The ilr coordinates can be readily used as covariates in regression models. They are coefficients with respect to a basis of the simplex space (in this case the SBP basis).
-## The clr coordinates should not be used as covariates in regression models as they will lead to singular covariance matrices, as they are constrained to have component sums zero and thus are not coefficients with respect to a basis of the simplex space.
-
-## We may afterwards back-transform fitted coefficients to coefficients in the original simplex space, thereby getting coefficients associated with each component.
-
-subject_tracking_six_clusters$ilr1 <- ilrX6[,1]
-subject_tracking_six_clusters$ilr2 <- ilrX6[,2]
-subject_tracking_six_clusters$ilr3 <- ilrX6[,3]
-subject_tracking_six_clusters$ilr4 <- ilrX6[,4]
-subject_tracking_six_clusters$ilr5 <- ilrX6[,5]
-
-subject_tracking_four_clusters$ilr1 <- ilrX4[,1]
-subject_tracking_four_clusters$ilr2 <- ilrX4[,2]
-subject_tracking_four_clusters$ilr3 <- ilrX4[,3]
-
-## Alternative basis 
-
-ilrX6.orthogonal1 <- Orthogonal.coordinate.generator(X6,1)
-ilrX6.orthogonal2 <- Orthogonal.coordinate.generator(X6,2)
-ilrX6.orthogonal3 <- Orthogonal.coordinate.generator(X6,3)
-ilrX6.orthogonal4 <- Orthogonal.coordinate.generator(X6,4)
-ilrX6.orthogonal5 <- Orthogonal.coordinate.generator(X6,5)
-ilrX6.orthogonal6 <- Orthogonal.coordinate.generator(X6,6)
-
-ilrX4.orthogonal1 <- Orthogonal.coordinate.generator(X4,1)
-ilrX4.orthogonal2 <- Orthogonal.coordinate.generator(X4,2)
-ilrX4.orthogonal3 <- Orthogonal.coordinate.generator(X4,3)
-ilrX4.orthogonal4 <- Orthogonal.coordinate.generator(X4,4)
-
-## We can use this to make 6 and 4 regressions respectively, taking one poi from each.
-## Seems to be a valid approach, but is cumbersome.
-
 ## Collecting the two clusterings in one file
 
 subject_tracking_clusters <- left_join(subject_tracking_six_clusters,subject_tracking_four_clusters[,c("userid","cluster","cluster1prob","cluster2prob","cluster3prob","cluster4prob","description","state0prob","state1prob","state2prob","state3prob","ilr1","ilr2","ilr3")],by="userid")
 subject_tracking_clusters <- rename(subject_tracking_clusters,ilr1 = ilr1.x, ilr2=ilr2.x, ilr3=ilr3.x,cluster1prob=cluster1prob.x,cluster2prob=cluster2prob.x,cluster3prob=cluster3prob.x,cluster4prob=cluster4prob.x,
                                     state0prob=state0prob.x,state1prob=state1prob.x,state2prob=state2prob.x,state3prob=state3prob.x,cluster=cluster.x,description=description.x)
-
-subject_tracking_clusters$ilrX6.orthogonal1.1 <- ilrX6.orthogonal1[,1]
-subject_tracking_clusters$ilrX6.orthogonal1.2 <- ilrX6.orthogonal1[,2]
-subject_tracking_clusters$ilrX6.orthogonal1.3 <- ilrX6.orthogonal1[,3]
-subject_tracking_clusters$ilrX6.orthogonal1.4 <- ilrX6.orthogonal1[,4]
-subject_tracking_clusters$ilrX6.orthogonal1.5 <- ilrX6.orthogonal1[,5]
-                                                                   
-subject_tracking_clusters$ilrX6.orthogonal2.1 <- ilrX6.orthogonal2[,1]
-subject_tracking_clusters$ilrX6.orthogonal2.2 <- ilrX6.orthogonal2[,2]
-subject_tracking_clusters$ilrX6.orthogonal2.3 <- ilrX6.orthogonal2[,3]
-subject_tracking_clusters$ilrX6.orthogonal2.4 <- ilrX6.orthogonal2[,4]
-subject_tracking_clusters$ilrX6.orthogonal2.5 <- ilrX6.orthogonal2[,5]
-
-subject_tracking_clusters$ilrX6.orthogonal3.1 <- ilrX6.orthogonal3[,1]
-subject_tracking_clusters$ilrX6.orthogonal3.2 <- ilrX6.orthogonal3[,2]
-subject_tracking_clusters$ilrX6.orthogonal3.3 <- ilrX6.orthogonal3[,3]
-subject_tracking_clusters$ilrX6.orthogonal3.4 <- ilrX6.orthogonal3[,4]
-subject_tracking_clusters$ilrX6.orthogonal3.5 <- ilrX6.orthogonal3[,5]
-
-subject_tracking_clusters$ilrX6.orthogonal4.1 <- ilrX6.orthogonal4[,1]
-subject_tracking_clusters$ilrX6.orthogonal4.2 <- ilrX6.orthogonal4[,2]
-subject_tracking_clusters$ilrX6.orthogonal4.3 <- ilrX6.orthogonal4[,3]
-subject_tracking_clusters$ilrX6.orthogonal4.4 <- ilrX6.orthogonal4[,4]
-subject_tracking_clusters$ilrX6.orthogonal4.5 <- ilrX6.orthogonal4[,5]
-
-subject_tracking_clusters$ilrX6.orthogonal5.1 <- ilrX6.orthogonal5[,1]
-subject_tracking_clusters$ilrX6.orthogonal5.2 <- ilrX6.orthogonal5[,2]
-subject_tracking_clusters$ilrX6.orthogonal5.3 <- ilrX6.orthogonal5[,3]
-subject_tracking_clusters$ilrX6.orthogonal5.4 <- ilrX6.orthogonal5[,4]
-subject_tracking_clusters$ilrX6.orthogonal5.5 <- ilrX6.orthogonal5[,5]
-
-subject_tracking_clusters$ilrX6.orthogonal6.1 <- ilrX6.orthogonal6[,1]
-subject_tracking_clusters$ilrX6.orthogonal6.2 <- ilrX6.orthogonal6[,2]
-subject_tracking_clusters$ilrX6.orthogonal6.3 <- ilrX6.orthogonal6[,3]
-subject_tracking_clusters$ilrX6.orthogonal6.4 <- ilrX6.orthogonal6[,4]
-subject_tracking_clusters$ilrX6.orthogonal6.5 <- ilrX6.orthogonal6[,5]
-
-##
-
-subject_tracking_clusters$ilrX4.orthogonal1.1 <- ilrX4.orthogonal1[,1]
-subject_tracking_clusters$ilrX4.orthogonal1.2 <- ilrX4.orthogonal1[,2]
-subject_tracking_clusters$ilrX4.orthogonal1.3 <- ilrX4.orthogonal1[,3]
-
-subject_tracking_clusters$ilrX4.orthogonal2.1 <- ilrX4.orthogonal2[,1]
-subject_tracking_clusters$ilrX4.orthogonal2.2 <- ilrX4.orthogonal2[,2]
-subject_tracking_clusters$ilrX4.orthogonal2.3 <- ilrX4.orthogonal2[,3]
-
-subject_tracking_clusters$ilrX4.orthogonal3.1 <- ilrX4.orthogonal3[,1]
-subject_tracking_clusters$ilrX4.orthogonal3.2 <- ilrX4.orthogonal3[,2]
-subject_tracking_clusters$ilrX4.orthogonal3.3 <- ilrX4.orthogonal3[,3]
-
-subject_tracking_clusters$ilrX4.orthogonal4.1 <- ilrX4.orthogonal4[,1]
-subject_tracking_clusters$ilrX4.orthogonal4.2 <- ilrX4.orthogonal4[,2]
-subject_tracking_clusters$ilrX4.orthogonal4.3 <- ilrX4.orthogonal4[,3]
 
 ## load baseline data
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
@@ -515,27 +386,6 @@ upperCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,6],si
 ## 95%CI for mobileUseBefore sleep og continuos BMI
 confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCat2,estCat3,estCat4,estCat5),c(upperCat2,upperCat3,upperCat4,upperCat5))
 
-
-
-#Profile intervals
-#mod <- quote(gamlss())
-#prof.term(model=m,criterion="GD",min=-5,max=5,step=1,plot=T)$CI
-
-
-##
-
-# sigma = exp(pool_inf_base$qbar[20])
-
-# nu = pool_inf_base$qbar[21]
-
-# mu = summary(pool_inf_base)[2,1]
-
-#Density integration: integrate(function(y) (1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
-
-#Untruncated integration: integrate(function(y) y*(1/(sqrt(2*pi)*sigma))*(y^(nu-1)/mu^nu)*exp(-(((y/mu)^(nu)-1)/(nu*sigma))^2/2),0,Inf)$value
-
-
-##
 
 
 #trend
