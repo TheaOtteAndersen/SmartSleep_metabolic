@@ -1,6 +1,4 @@
 
-## Analyses for Theas 2nd PhD paper on night-time smartphone use and obesity and metabolic biomarkers
-
 ###### Analysis of associations between metabolic biomarkers and smartphone activity ######
 
 
@@ -19,6 +17,9 @@ library(mice)
 library(miceadds)
 library(Publish)
 library(ggplot2)
+library(ggtern)
+
+expit = function(x) exp(x)/(1+exp(x))
 
 estimate.pooler <- function(coef,sd){
   n_row <- nrow(coef)
@@ -39,15 +40,15 @@ subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleani
 
 ## Mapping compositions to R^(D-1)
 SBP6 <- matrix(c(1,-1,-1,-1,-1,-1,0,-1,-1,1,1,1,0,-1,1,0,0,0,0,0,0,1,1,-1,0,0,0,1,-1,0),byrow=T,nrow=5,ncol=6)
-## Coefficients are: Intercept, No activity vs rest, little activity vs more activity, little offset vs little onset, moderate activity vs much activity, moderate offset vs moderate onset
+## Coefficients are: Intercept, No activity vs rest (1 vs 2,3,4,5,6), little activity vs more activity, little offset vs little onset, moderate activity vs much activity, moderate offset vs moderate onset
 SBP4 <- matrix(c(1,1,-1,1,1,-1,0,1,1,0,0,-1),byrow=T,nrow=3,ncol=4)
-## Coefficients are: Intercept, No activity vs rest, little activity vs more activity, offset with activity vs onset with activity
+## Coefficients are: Intercept, No activity vs rest (1 vs 2,3,4), little activity vs more activity, offset with activity vs onset with activity
 
 
 X6 <- subject_tracking_six_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob")]
 X4 <- subject_tracking_four_clusters[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob")]
 
-Phi.generator <- function(X) {
+Phi.generator <- function(X) { #Orthonormal basis
   K <- nrow(X)
   L <- ncol(X)
   A <- matrix(rep(NA,K*L),nrow = K, ncol = L)
@@ -55,6 +56,18 @@ Phi.generator <- function(X) {
     r <- sum(X[i,]>0)
     s <- sum(X[i,]<0)
     A[i,] <- X[i,]*sqrt((r*s)/(r+s))*((X[i,]>0)*1/r + (X[i,]<0)*1/s)
+  }
+  return(A)
+}
+
+Orthogonal.coordinate.generator <- function(X,l) { #Inputs data and base index, outputs coordinates in a system with orthogonal basis elements
+  D <- ncol(X)
+  M <- nrow(X)
+  A <- matrix(rep(NA,(D-1)*M),ncol = D-1, nrow = M)
+  for (m in 1:M){
+  for (i in 1:(D-1)){
+    A[m,i] <- log2(unlist(c(X[m,l],X[m,-l]))/(prod(unlist(c(X[m,l],X[m,-l]))[(i+1):D])^(1/(D-i))))[i]
+  }
   }
   return(A)
 }
@@ -83,47 +96,138 @@ subject_tracking_four_clusters$ilr1 <- ilrX4[,1]
 subject_tracking_four_clusters$ilr2 <- ilrX4[,2]
 subject_tracking_four_clusters$ilr3 <- ilrX4[,3]
 
+## Alternative basis 
+
+ilrX6.orthogonal1 <- Orthogonal.coordinate.generator(X6,1)
+ilrX6.orthogonal2 <- Orthogonal.coordinate.generator(X6,2)
+ilrX6.orthogonal3 <- Orthogonal.coordinate.generator(X6,3)
+ilrX6.orthogonal4 <- Orthogonal.coordinate.generator(X6,4)
+ilrX6.orthogonal5 <- Orthogonal.coordinate.generator(X6,5)
+ilrX6.orthogonal6 <- Orthogonal.coordinate.generator(X6,6)
+
+ilrX4.orthogonal1 <- Orthogonal.coordinate.generator(X4,1)
+ilrX4.orthogonal2 <- Orthogonal.coordinate.generator(X4,2)
+ilrX4.orthogonal3 <- Orthogonal.coordinate.generator(X4,3)
+ilrX4.orthogonal4 <- Orthogonal.coordinate.generator(X4,4)
+
+## We can use this to make 6 and 4 regressions respectively, taking one poi from each.
+## Seems to be a valid approach, but is cumbersome.
+
 ## Collecting the two clusterings in one file
 
 subject_tracking_clusters <- left_join(subject_tracking_six_clusters,subject_tracking_four_clusters[,c("userid","cluster","cluster1prob","cluster2prob","cluster3prob","cluster4prob","description","state0prob","state1prob","state2prob","state3prob","ilr1","ilr2","ilr3")],by="userid")
 subject_tracking_clusters <- rename(subject_tracking_clusters,ilr1 = ilr1.x, ilr2=ilr2.x, ilr3=ilr3.x,cluster1prob=cluster1prob.x,cluster2prob=cluster2prob.x,cluster3prob=cluster3prob.x,cluster4prob=cluster4prob.x,
                                     state0prob=state0prob.x,state1prob=state1prob.x,state2prob=state2prob.x,state3prob=state3prob.x,cluster=cluster.x,description=description.x)
 
+subject_tracking_clusters$ilrX6.orthogonal1.1 <- ilrX6.orthogonal1[,1]
+subject_tracking_clusters$ilrX6.orthogonal1.2 <- ilrX6.orthogonal1[,2]
+subject_tracking_clusters$ilrX6.orthogonal1.3 <- ilrX6.orthogonal1[,3]
+subject_tracking_clusters$ilrX6.orthogonal1.4 <- ilrX6.orthogonal1[,4]
+subject_tracking_clusters$ilrX6.orthogonal1.5 <- ilrX6.orthogonal1[,5]
+                                                                   
+subject_tracking_clusters$ilrX6.orthogonal2.1 <- ilrX6.orthogonal2[,1]
+subject_tracking_clusters$ilrX6.orthogonal2.2 <- ilrX6.orthogonal2[,2]
+subject_tracking_clusters$ilrX6.orthogonal2.3 <- ilrX6.orthogonal2[,3]
+subject_tracking_clusters$ilrX6.orthogonal2.4 <- ilrX6.orthogonal2[,4]
+subject_tracking_clusters$ilrX6.orthogonal2.5 <- ilrX6.orthogonal2[,5]
+
+subject_tracking_clusters$ilrX6.orthogonal3.1 <- ilrX6.orthogonal3[,1]
+subject_tracking_clusters$ilrX6.orthogonal3.2 <- ilrX6.orthogonal3[,2]
+subject_tracking_clusters$ilrX6.orthogonal3.3 <- ilrX6.orthogonal3[,3]
+subject_tracking_clusters$ilrX6.orthogonal3.4 <- ilrX6.orthogonal3[,4]
+subject_tracking_clusters$ilrX6.orthogonal3.5 <- ilrX6.orthogonal3[,5]
+
+subject_tracking_clusters$ilrX6.orthogonal4.1 <- ilrX6.orthogonal4[,1]
+subject_tracking_clusters$ilrX6.orthogonal4.2 <- ilrX6.orthogonal4[,2]
+subject_tracking_clusters$ilrX6.orthogonal4.3 <- ilrX6.orthogonal4[,3]
+subject_tracking_clusters$ilrX6.orthogonal4.4 <- ilrX6.orthogonal4[,4]
+subject_tracking_clusters$ilrX6.orthogonal4.5 <- ilrX6.orthogonal4[,5]
+
+subject_tracking_clusters$ilrX6.orthogonal5.1 <- ilrX6.orthogonal5[,1]
+subject_tracking_clusters$ilrX6.orthogonal5.2 <- ilrX6.orthogonal5[,2]
+subject_tracking_clusters$ilrX6.orthogonal5.3 <- ilrX6.orthogonal5[,3]
+subject_tracking_clusters$ilrX6.orthogonal5.4 <- ilrX6.orthogonal5[,4]
+subject_tracking_clusters$ilrX6.orthogonal5.5 <- ilrX6.orthogonal5[,5]
+
+subject_tracking_clusters$ilrX6.orthogonal6.1 <- ilrX6.orthogonal6[,1]
+subject_tracking_clusters$ilrX6.orthogonal6.2 <- ilrX6.orthogonal6[,2]
+subject_tracking_clusters$ilrX6.orthogonal6.3 <- ilrX6.orthogonal6[,3]
+subject_tracking_clusters$ilrX6.orthogonal6.4 <- ilrX6.orthogonal6[,4]
+subject_tracking_clusters$ilrX6.orthogonal6.5 <- ilrX6.orthogonal6[,5]
+
+##
+
+subject_tracking_clusters$ilrX4.orthogonal1.1 <- ilrX4.orthogonal1[,1]
+subject_tracking_clusters$ilrX4.orthogonal1.2 <- ilrX4.orthogonal1[,2]
+subject_tracking_clusters$ilrX4.orthogonal1.3 <- ilrX4.orthogonal1[,3]
+
+subject_tracking_clusters$ilrX4.orthogonal2.1 <- ilrX4.orthogonal2[,1]
+subject_tracking_clusters$ilrX4.orthogonal2.2 <- ilrX4.orthogonal2[,2]
+subject_tracking_clusters$ilrX4.orthogonal2.3 <- ilrX4.orthogonal2[,3]
+
+subject_tracking_clusters$ilrX4.orthogonal3.1 <- ilrX4.orthogonal3[,1]
+subject_tracking_clusters$ilrX4.orthogonal3.2 <- ilrX4.orthogonal3[,2]
+subject_tracking_clusters$ilrX4.orthogonal3.3 <- ilrX4.orthogonal3[,3]
+
+subject_tracking_clusters$ilrX4.orthogonal4.1 <- ilrX4.orthogonal4[,1]
+subject_tracking_clusters$ilrX4.orthogonal4.2 <- ilrX4.orthogonal4[,2]
+subject_tracking_clusters$ilrX4.orthogonal4.3 <- ilrX4.orthogonal4[,3]
+
 ## load baseline data
-setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
+base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
+base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load followup sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
+CSS$mobileUseNight <- factor(CSS$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
+CSS$mobileUseBeforeSleep <- factor(CSS$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load population sample
 pop_data <-read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv")
+pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
+pop_data$mobileUseBeforeSleep <- factor(pop_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load clinical data (survey and clinical data)
 clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
 clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
+
+clin_data$mobileUseNight <- factor(clin_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
+clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+
 
 # --------------------------------------------------------------------------- ##
 
 #Baseline data with self-reports
 
 ## if no mobile phone = NA
-base_data$mobileUseBeforeSleep[base_data$mobilephone=="No mobile phone"] <- NA
-base_data$mobileUseNight[base_data$mobilephone=="No mobile phone"] <- NA
+base_data$pmpuScale[base_data$mobilephone=="No mobile phone"] <- NA
 
-## Smartphone use before sleep onset
+## risk profiles for baseline data 
+base_data$selfScore <- (base_data$mobileUseBeforeSleep=="5-7 times per week")*4+(base_data$mobileUseBeforeSleep=="2-4 times per week")*3+(base_data$mobileUseBeforeSleep=="Once a week")*3+(base_data$mobileUseBeforeSleep=="Every month or less")*2+(base_data$mobileUseBeforeSleep=="Never")*1+
+  (base_data$mobileUseNight=="Every night or almost every night")*4+(base_data$mobileUseNight=="A few times a week")*3+(base_data$mobileUseNight=="A few times a month or less")*2+(base_data$mobileUseNight=="Never")*1+
+  (base_data$mobileCheck==">20 times per hour")*4+(base_data$mobileCheck=="11-20 times per hour")*4+(base_data$mobileCheck=="5-10 times per hour")*3+(base_data$mobileCheck=="1-4 times per hour")*2+(base_data$mobileCheck=="Every 2nd hour")*2+(base_data$mobileCheck=="Several times per day")*1+(base_data$mobileCheck=="Once a day")*1+
+  (base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4
+summary(base_data$selfScore[base_data$imputation!=0])
+base_data$selfScoreCat<-NA
+base_data$selfScoreCat[!is.na(base_data$selfScore)] <- "1"
+base_data$selfScoreCat[base_data$selfScore>=8]="2"
+base_data$selfScoreCat[base_data$selfScore>=10]="3"
+base_data$selfScoreCat[base_data$selfScore>=12]="4"
+table(base_data$selfScoreCat[base_data$imputation!=0],useNA="always")/25
+
+# bar chart selfScoreCat 
+ggplot(base_data, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+
+## tjek risk profiles
 publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
-base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
-
-## Night-time smartphone use
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
-base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
-
-## daytime smartphone use
 publish(univariateTable( ~ mobileCheck,data=base_data, column.percent=TRUE))
+table((base_data$pmpuScale<14)*1+(base_data$pmpuScale>=14 & base_data$pmpuScale<17)*2+(base_data$pmpuScale>=17 & base_data$pmpuScale<19)*3+(base_data$pmpuScale>=19)*4)/20
 
-## bmi  
-publish(univariateTable( ~ bmi,data=base_data, column.percent=TRUE))
+publish(univariateTable( ~ selfScoreCat,data=base_data, column.percent=TRUE))
+      
 base_data$bmi30 <- (base_data$bmi>=30)
 base_data$bmi25 <- (base_data$bmi>=25)
 
@@ -132,25 +236,35 @@ base_data$bmi25 <- (base_data$bmi>=25)
 base_data_mids <- as.mids(base_data,.imp="imputation")
 
 ## BMI kategoriseringer ved baseline
-table(base_data$bmi<25, base_data$mobileUseNight)/26
-table(base_data$bmi>=25&base_data$bmi<30, base_data$mobileUseNight)/26
-table(base_data$bmi>=30, base_data$mobileUseNight)/26
+table(base_data$bmi<25, base_data$selfScoreCat)/26
+table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/26
+table(base_data$bmi>=30, base_data$selfScoreCat)/26
 
-table(base_data$bmi<25, base_data$mobileUseBeforeSleep)/26
-table(base_data$bmi>=25&base_data$bmi<30, base_data$mobileUseBeforeSleep)/26
-table(base_data$bmi>=30, base_data$mobileUseBeforeSleep)/26
+table(base_data$bmi<25, base_data$selfScoreCat)/21
+table(base_data$bmi>=25&base_data$bmi<30, base_data$selfScoreCat)/21
+table(base_data$bmi>=30, base_data$selfScoreCat)/21
 
 
 # --------------------------------------------------------------------------- ##
-#Followup sample (CSS sample)
+#Followup sample - using quartile levels from baseline sample
 
-## Smartphone use before sleep onset
-publish(univariateTable( ~ mobileUseBeforeSleep,data=CSS, column.percent=TRUE))
-CSS$mobileUseBeforeSleep <- factor(CSS$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
+## risk profiles for CSS
+CSS$selfScore <- (CSS$mobileUseBeforeSleep=="5-7 times per week")*4+(CSS$mobileUseBeforeSleep=="2-4 times per week")*3+(CSS$mobileUseBeforeSleep=="Once a week")*3+(CSS$mobileUseBeforeSleep=="Every month or less")*2+(CSS$mobileUseBeforeSleep=="Never")*1+
+  (CSS$mobileUseNight=="Every night or almost every night")*4+(CSS$mobileUseNight=="A few times a week")*3+(CSS$mobileUseNight=="A few times a month or less")*2+(CSS$mobileUseNight=="Never")*1+
+  (CSS$mobileCheck==">20 times an hour")*4+(CSS$mobileCheck=="11-20 times an hour")*4+(CSS$mobileCheck=="5-10 times an hour")*3+(CSS$mobileCheck=="1-4 times an hour")*2+(CSS$mobileCheck=="Every 2nd hour")*2+(CSS$mobileCheck=="Several times a day")*1+(CSS$mobileCheck=="Once a day or less")*1+
+  (CSS$pmpuScale<=14)*1+(CSS$pmpuScale>14 & CSS$pmpuScale<17)*2+(CSS$pmpuScale>=17 & CSS$pmpuScale<19)*3+(CSS$pmpuScale>=19)*4
+summary(CSS$selfScore[CSS$imputation!=0])
+CSS$selfScoreCat <- NA
+CSS$selfScoreCat[!is.na(CSS$selfScore)]<-"1"
+CSS$selfScoreCat[CSS$selfScore>=8]="2"
+CSS$selfScoreCat[CSS$selfScore>=10]="3"
+CSS$selfScoreCat[CSS$selfScore>=12]="4"
+table(CSS$selfScoreCat[CSS$imputation!=0], useNA="always")
 
-## night-time smartphone use
-publish(univariateTable( ~ mobileUseNight,data=CSS, column.percent=TRUE))
-CSS$mobileUseNight <- factor(CSS$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
+# bar chart selfScoreCat 
+ggplot(CSS, aes(x = factor(selfScoreCat))) +
+  geom_bar()
+
 
 ## merge survey and tracking data 
 CSS_track <- inner_join(CSS,subject_tracking_clusters,by="userid")
@@ -204,20 +318,29 @@ long_data_mids <- as.mids(long_data,.imp="imputation")
 # --------------------------------------------------------------------------- ##
 #Population sample
 
-## smartphone use before sleep onset
-table(pop_data$mobileUseBeforeSleep, useNA="always")
-pop_data$mobileUseBeforeSleep <- factor(pop_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
+## risk profiles for population sample
+pop_data$selfScore <- (pop_data$mobileUseBeforeSleep=="5-7 times per week")*4+(pop_data$mobileUseBeforeSleep=="2-4 times per week")*3+(pop_data$mobileUseBeforeSleep=="Once a week")*3+(pop_data$mobileUseBeforeSleep=="Every month or less")*2+(pop_data$mobileUseBeforeSleep=="Never")*1+
+  (pop_data$mobileUseNight=="Every night or almost every night")*4+(pop_data$mobileUseNight=="A few times a week")*3+(pop_data$mobileUseNight=="A few times a month or less")*2+(pop_data$mobileUseNight=="Never")*1+
+  (pop_data$mobileCheck==">20 times an hour")*4+(pop_data$mobileCheck=="11-20 times an hour")*4+(pop_data$mobileCheck=="5-10 times an hour")*3+(pop_data$mobileCheck=="1-4 times an hour")*2+(pop_data$mobileCheck=="Every 2nd hour")*2+(pop_data$mobileCheck=="Several times a day")*1+(pop_data$mobileCheck=="Once a day or less")*1+
+  (pop_data$pmpuScale<=14)*1+(pop_data$pmpuScale>14 & pop_data$pmpuScale<17)*2+(pop_data$pmpuScale>=17 & pop_data$pmpuScale<19)*3+(pop_data$pmpuScale>=19)*4
+summary(pop_data$selfScore[pop_data$imputation!=0])
 
-## night-time smartphone use 
-publish(univariateTable( ~ mobileUseNight,data=pop_data, column.percent=TRUE))
-pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
+## categorise selfScoreCat?
+pop_data$selfScoreCat <- NA
+pop_data$selfScoreCat[!is.na(pop_data$selfScore)]<-"1"
+pop_data$selfScoreCat[pop_data$selfScore>=8]="2"
+pop_data$selfScoreCat[pop_data$selfScore>=10]="3"
+pop_data$selfScoreCat[pop_data$selfScore>=12]="4"
+table(pop_data$selfScoreCat[pop_data$imputation!=0])
 
 ## merge tracking and survey data for population sample
 pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
+
 ## Tracking clusters som én numerisk variabel
 pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track$cluster %in% c("Cluster 2","Cluster 3"))*2+(pop_track$cluster %in% c("Cluster 5","Cluster 6"))*3+(pop_track$cluster %in% c("Cluster 4"))*4
+
 
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
 
@@ -227,7 +350,6 @@ pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
 ## merge survey and clinical data
 clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
-
 ## merge with tracking data
 clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
 
@@ -282,9 +404,9 @@ hist(base_data$weight,breaks=40)
 #### BASE POPULATION
 
 ## test kontinuert bmi
-plot(fitted(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))))
-hist(residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),xlim=c(-20,20),breaks=200)
-hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1)))$sim_1,breaks=40) #The bell-shape is not that well suited
+plot(fitted(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),residuals(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))))
+hist(residuals(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1))),xlim=c(-20,20),breaks=200)
+hist(simulate(lm(bmi~(mobileUseNight+age+gender+education+occupation), weights=sample_weights, data=subset(base_data,imputation==1)))$sim_1,breaks=40) #The bell-shape is not that well suited
 
 #Conclusion: The lm is not by itself appropriate for describing the distribution of BMI.
 
@@ -292,7 +414,7 @@ hist(simulate(lm(bmi~(selfScoreCat+age+gender+education+occupation), weights=sam
 #Alternative: Pretty good fit. A general family of models.
 
 
-#Confidence intervals and estimates:
+#Confidence intervals and estimates for continuous BMI:
 
 coefs <- list()
 ses <- list()
@@ -300,7 +422,7 @@ vcovs <- list()
 models <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi ~ selfScoreCat+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG) #May use BCS instead of BCCG which corresponds to using a t distribution instead of normal. This can fit heavier tails, though in this case a very large df is fitted, meaning that there is not much difference.
+  m <- gamlss(bmi ~ mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","mobileUseNight","mobileUseBeforeSleep","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG) #May use BCS instead of BCCG which corresponds to using a t distribution instead of normal. This can fit heavier tails, though in this case a very large df is fitted, meaning that there is not much difference.
   m_sum <- summary(m)
   models[[i]] <- m
   coefs[[i]] <- m_sum[,1]
@@ -325,10 +447,14 @@ m$nu.coefficients <- pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigm
 summary(pool_inf_base,conf.int=T)
 
 #Median contrasts:
-mus<- c(predict(m,what="mu",type="response")[(base_data$selfScoreCat=="1" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
-  predict(m,what="mu",type="response")[(base_data$selfScoreCat=="2" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
-  predict(m,what="mu",type="response")[(base_data$selfScoreCat=="3" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
-  predict(m,what="mu",type="response")[(base_data$selfScoreCat=="4" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1]) 
+mus<- c(predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Never" & base_data$mobileUseBeforeSleep == "Never" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="A few times a week" & base_data$mobileUseBeforeSleep == "Never" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="A few times a month or less" & base_data$mobileUseBeforeSleep == "Never" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1], 
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Every night or almost every night" & base_data$mobileUseBeforeSleep == "Never" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1],
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Never" & base_data$mobileUseBeforeSleep == "Every month or less" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1],
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Never" & base_data$mobileUseBeforeSleep == "Once a week" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1],
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Never" & base_data$mobileUseBeforeSleep == "2-4 times per week" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1],
+  predict(m,what="mu",type="response")[(base_data$mobileUseNight=="Never" & base_data$mobileUseBeforeSleep == "5-7 times per week" & base_data$age==35 & base_data$gender=="Female" & base_data$education=="long cycle higher education" & base_data$occupation=="employed")[base_data$imputation==i & rowSums(is.na(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)))==0]][1]) 
 
 mus-mus[1]
 
@@ -338,32 +464,54 @@ mus-mus[1]
 #The truncation makes sense to have for BMI.
 
 #Finding particular means (contrasts) by integration
-m1 <- integrate(function(y) y*dBCCG(x=y,mu=mus[1],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value  
-m2 <- integrate(function(y) y*dBCCG(x=y,mu=mus[2],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value
-m3 <- integrate(function(y) y*dBCCG(x=y,mu=mus[3],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value
-m4 <- integrate(function(y) y*dBCCG(x=y,mu=mus[4],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value
+m1 <- integrate(function(y) y*dBCCG(x=y,mu=mus[1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value  
+m2 <- integrate(function(y) y*dBCCG(x=y,mu=mus[2],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m3 <- integrate(function(y) y*dBCCG(x=y,mu=mus[3],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m4 <- integrate(function(y) y*dBCCG(x=y,mu=mus[4],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m5 <- integrate(function(y) y*dBCCG(x=y,mu=mus[5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m6 <- integrate(function(y) y*dBCCG(x=y,mu=mus[6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m7 <- integrate(function(y) y*dBCCG(x=y,mu=mus[7],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
+m8 <- integrate(function(y) y*dBCCG(x=y,mu=mus[8],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
 
-ms <- c(m1,m2,m3,m4)
-c(m2,m3,m4)-m1
+
+ms <- c(m1,m2,m3,m4,m5,m6,m7,m8)
+c(m2,m3,m4,m5,m6,m7,m8)-m1
 
 plot(mus,ms)
 
 #Now what about confidence regions and p values? We simulate from the fitted BCCG distributions?
 
-#Profile intervals:
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,5],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,1],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,6],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
+#Confidence intervals:
+lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,5],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,1],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,6],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
+lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,5],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,1],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],sigma=exp(pool_inf_base$qbar[20]),nu=pool_inf_base$qbar[21]),0,Inf)$value 
+lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
+lowerCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,5]+1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+lowerCat6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[6,5]+1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[6,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[6,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+lowerCat7 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[7,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat7 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[7,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat7 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[7,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+lowerCat8 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[8,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat8 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[8,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat8 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[8,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+
+confints_base <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5,lowerCat6,lowerCat7,lowerCat8),c(estCat2,estCat3,estCat4,estCat5,estCat6,estCat7,estCat8),c(upperCat2,upperCat3,upperCat4,upperCat5,upperCat6,upperCat7,upperCat8))
 
 #Profile intervals
 #mod <- quote(gamlss())
@@ -397,7 +545,7 @@ vcovs <- list()
 models <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi ~ as.numeric(selfScoreCat)+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","selfScoreCat","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi ~ as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation, sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(base_data[,c("bmi","mobileUseNight","mobileUseBeforeSleep","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   models[[i]] <- m
   coefs[[i]] <- m_sum[,1]
@@ -418,40 +566,39 @@ m$mu.coefficients <- pool_inf_baseTrend$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
 m$nu.coefficients <- pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
-integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)  
-integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[1]+m$mu.coefficients[2],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)
-
-integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value  -
-  integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[1]+m$mu.coefficients[2],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value
-
-integrate(function(y) y*dBCCG(x=y,mu=m$mu.coefficients[2],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)
-
-
 #interval
-lowerCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCatTrend <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[2,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-confints_baseTrend <-c(lowerCatTrend,estCatTrend,upperCatTrend)
+lowerCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,5],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,1],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrend)[3,6],sigma=exp(pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrend$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+
+
+confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNight),
+                           c(lowerCatTrendBS,estCatTrendBS,upperCatTrendBS))
 
 summary(pool_inf_baseTrend)$p[2]
+summary(pool_inf_baseTrend)$p[3]
 
 
 # --------------------------------------------------------------------------- ##
-## cross-sectional associations between risk profiles and bmi (25, 30 & continous)
+## cross-sectional associations between risk profiles and bmi (25, 30)
 # --------------------------------------------------------------------------- ##
 
-## Using the mice package with mids objects (night-time smartphone use and bmi)
+## Using the mice package with mids objects
+mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
-## virker åbenbart ikke? (02062022)
-mod25 <- with(base_data_mids,glm((bmi>=25)~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
-mod30 <- with(base_data_mids,glm((bmi>=30)~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
+pool(mod30)
+pool(mod25)
 
 ## test for trend
-TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(mobileUseNight))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 testT <- summary(pool(TEST), conf.int = T)
 
-TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(mobileUseNight))+age+gender+education+occupation), weights=sample_weights,family=binomial))
+TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
 test2 <- summary(pool(TEST2), conf.int = T)
 
 ## OR for BMI>30
@@ -466,31 +613,6 @@ cbind(exp(model25$estimate),
 exp(model25$`2.5 %`),
 exp(model25$`97.5 %`))
 
-## smartphone use before sleep onset and bmi
-mod25Before <- with(base_data_mids,glm(bmi25~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
-mod30Before <- with(base_data_mids,glm(bmi30~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
-
-## test for trend
-## BMI > 25
-TEST2 <- with(base_data_mids,glm((bmi>=25)~((as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-test2 <- summary(pool(TEST2), conf.int = T)
-
-## BMI > 30
-TEST <- with(base_data_mids,glm((bmi>=30)~((as.numeric(mobileUseBeforeSleep))+age+gender+education+occupation), weights=sample_weights,family=binomial))
-testT <- summary(pool(TEST), conf.int = T)
-
-## OR for BMI >25
-model25Before <- summary(pool(mod25Before), conf.int=T)
-cbind(exp(model25$estimate),
-      exp(model25$`2.5 %`),
-      exp(model25$`97.5 %`))
-
-## OR for BMI>30
-model30Before <- summary(pool(mod30Before),conf.int = T)
-cbind(exp(model30$estimate),
-      exp(model30$`2.5 %`),
-      exp(model30$`97.5 %`))
-
 
 # --------------------------------------------------------------------------- ##
 ## longitudinal analysis of risk scores of smartphone behavior and changes in BMI
@@ -504,24 +626,24 @@ cbind(exp(model30$estimate),
 ## ----- ##
 
 ## from below 25 to above 25
-model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 
 ## test for trend
 
-test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25 <- summary(pool(test25), conf.int = T)
 #anova(test25,model25)
 
 
 ## from below 30 to above 30
-model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
 
-test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 testT30 <- summary(pool(test30), conf.int=T)
 #anova(test30,model30)
 
@@ -530,25 +652,23 @@ testT30 <- summary(pool(test30), conf.int=T)
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
-plot(fitted(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
-     residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
-hist(residuals(lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
+plot(fitted(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
+     residuals(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
+hist(residuals(lm(difference~(mobileUseNight.y+mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
 
 
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
-m <- lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
+m <- lm(bmi.fu~((mobileUseNight.y+mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","mobileUseBeforeSleep.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
-model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~(selfScoreCat.y:as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+model_summary_diff <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseNight.y+mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 #Does it make sense to include tracking information at follow up, or to include self score at followup as well?
 #(reduce noise in measurement?)
 
-cbind(model_summary_diff$estimate[1:4],model_summary_diff$`2.5 %`[1:4],model_summary_diff$`97.5 %`[1:4])
+cbind(model_summary_diff$estimate[17:24],model_summary_diff$`2.5 %`[17:24],model_summary_diff$`97.5 %`[17:24])
 
 
-test_num <- with(bmi_followup_mids,lm(difference/as.numeric(followup_time)~(as.numeric(selfScoreCat.y)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
+test_num <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)+as.numeric(mobileUseBeforeSleep.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
 test_Tnum <- summary(pool(test_num), conf.int=T)
-
-
 
 
 #Generally:
@@ -560,37 +680,612 @@ test_Tnum <- summary(pool(test_num), conf.int=T)
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
 
-#####Tracking data for the followup CSS sample
+#####Tracking data for the followup CSS sample: 
 
-#Mice-based inference for models:
+#Mice-based inference for models: 
 
-#BMI indicators
+## BMI indicators
 
-summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+## Tracking
 
-clr.beta <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6
-#clr.beta = log(beta/gm(beta)), and so contrasts between clr.beta entries are contrasts between log(beta) entries.
+## >=25
 
-beta <- exp(summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6)#/sum(exp(summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)$estimate[2:6]%*%Phi6))
-#Now we can get contrasts between beta's in some simplex - does the particular version of the simplex matter?
+## Interpretations are as in Hron et. al (2016), coefficients for effect of doubling proportion with respect to average contribution of other parts (for the remaining mass)
+m25_6clustprob <- pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial)))
 
-## How should we present the contrast parameters?
+beta1 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta2 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta3 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta4 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta5 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta6 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
 
-summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilr1+ilr2+ilr3+ilr4+ilr5+selfScoreCat+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+six.cluster.betas <- rbind(beta1,beta2,beta3,beta4,beta5,beta6)
+six.cluster.betas$term <- c("cluster 1","cluster 2", "cluster 3", "cluster 4", "cluster 5", "cluster 6")
 
-#m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+gender+education+occupation), sigma.formula = ~ 1,
-#            nu.formula = ~ 1,weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster1prob","cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","selfScoreCat","age","gender","education","occupation","bmi","sample_weights","imputation")],imputation==10)),family=BCCG,method=RS(100))
-#robust=TRUE? Doesn't change much when the fit is this good.
+#MSE25_6clustprob <- mean((expit(as.numeric(m25_6clustprob$pooled$estimate %*% t(data.frame(1,CSS_track$ilrX6.orthogonal1.1[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.2[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.3[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.4[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.5[CSS_track$imputation!=0],
+#                                                                                           CSS_track$age[CSS_track$imputation!=0],CSS_track$gender[CSS_track$imputation!=0]=="Male",CSS_track$gender[CSS_track$imputation!=0]=="Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "medium cycle higher education",
+#                                                                                           CSS_track$education[CSS_track$imputation!=0] == "Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "short cycle higher education",CSS_track$education[CSS_track$imputation!=0] == "Technical vocational education",
+#                                                                                           CSS_track$education[CSS_track$imputation!=0] == "Upper secondary education", CSS_track$occupation[CSS_track$imputation!=0] == "Other",CSS_track$occupation[CSS_track$imputation!=0] == "outside labor market",CSS_track$occupation[CSS_track$imputation!=0] == "student",CSS_track$occupation[CSS_track$imputation!=0] == "unemployed")))
+#)-(CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
 
-#Numeric BMI
+#note correspondence between parametrizations
+m <- glm((bmi>=25) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial,data=CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m25_6clustprob$pooled$estimate
 
-#Confidence intervals:
+MSE25_6clustprob <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
+
+##
+
+m25_4clustprob <- pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+
+beta1 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta2 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta3 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta4 <- summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+
+four.cluster.betas <- rbind(beta1,beta2,beta3,beta4)
+four.cluster.betas$term <- c("cluster 1","cluster 2", "cluster 3", "cluster 4")
+
+# Prediction
+
+m <- glm((bmi>=25) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial,data=CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m25_4clustprob$pooled$estimate
+
+MSE25_4clustprob <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
+
+## Hence, six clusters seem to distinguish better in this case.
+
+## Using maximal cluster assignments:
+## 6 clusters
+m25_6clustmax <- pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:6,]
+
+#MSE25_6clustmax <- mean((expit(as.numeric(m25_6clustmax$pooled$estimate %*% t(data.frame(1,CSS_track$cluster[CSS_track$imputation!=0]=="Cluster 2",CSS_track$cluster[CSS_track$imputation!=0]=="Cluster 3",CSS_track$cluster[CSS_track$imputation!=0]=="Cluster 4",CSS_track$cluster[CSS_track$imputation!=0]=="Cluster 5",CSS_track$cluster[CSS_track$imputation!=0]=="Cluster 6",
+#                                                                                         CSS_track$age[CSS_track$imputation!=0],CSS_track$gender[CSS_track$imputation!=0]=="Male",CSS_track$gender[CSS_track$imputation!=0]=="Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "medium cycle higher education",
+#                                                                                         CSS_track$education[CSS_track$imputation!=0] == "Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "short cycle higher education",CSS_track$education[CSS_track$imputation!=0] == "Technical vocational education",
+#                                                                                         CSS_track$education[CSS_track$imputation!=0] == "Upper secondary education", CSS_track$occupation[CSS_track$imputation!=0] == "Other",CSS_track$occupation[CSS_track$imputation!=0] == "outside labor market",CSS_track$occupation[CSS_track$imputation!=0] == "student",CSS_track$occupation[CSS_track$imputation!=0] == "unemployed")))
+#)-(CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
+
+m <- glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial,data=CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m25_6clustmax$pooled$estimate
+
+MSE25_6clustmax <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
+
+
+## 4 clusters
+m25_4clustmax <- pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:6,]
+
+# Prediction
+
+m <- glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial,data=CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m25_4clustmax$pooled$estimate
+
+MSE25_4clustmax <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=25))^2)
+
+
+
+## >=30
+m30_6clustprob <- pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+
+beta_30_1 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_2 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_3 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_4 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_5 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_6 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+
+six.cluster.beta_30 <- rbind(beta_30_1,beta_30_2,beta_30_3,beta_30_4,beta_30_5,beta_30_6)
+six.cluster.beta_30$term <- c("cluster 1","cluster 2", "cluster 3", "cluster 4", "cluster 5", "cluster 6")
+
+#mean((assigned probability - observed indicator)^2)
+#MSE30_6clustprob <- mean((expit(as.numeric(m30_6clustprob$pooled$estimate %*% t(data.frame(1,CSS_track$ilrX6.orthogonal1.1[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.2[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.3[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.4[CSS_track$imputation!=0],CSS_track$ilrX6.orthogonal1.5[CSS_track$imputation!=0],
+#                                                                                         CSS_track$age[CSS_track$imputation!=0],CSS_track$gender[CSS_track$imputation!=0]=="Male",CSS_track$gender[CSS_track$imputation!=0]=="Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "medium cycle higher education",
+#                                                                                         CSS_track$education[CSS_track$imputation!=0] == "Other",CSS_track$education[CSS_track$imputation!=0] == "Primary school",CSS_track$education[CSS_track$imputation!=0] == "short cycle higher education",CSS_track$education[CSS_track$imputation!=0] == "Technical vocational education",
+#                                                                                         CSS_track$education[CSS_track$imputation!=0] == "Upper secondary education", CSS_track$occupation[CSS_track$imputation!=0] == "Other",CSS_track$occupation[CSS_track$imputation!=0] == "outside labor market",CSS_track$occupation[CSS_track$imputation!=0] == "student",CSS_track$occupation[CSS_track$imputation!=0] == "unemployed")))
+#)-(CSS_track$bmi[CSS_track$imputation!=0]>=30))^2)
+
+m <- glm((bmi>=30) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial, data = CSS_track[CSS_track$imputation==1,])
+m$coefficients <- beta_30_1$pooled$estimate
+
+MSE30_6clustprob <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=30))^2)
+
+
+m30_4clustprob <- pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+
+beta_30_1 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_2 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_3 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+beta_30_4 <- summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[2,]
+
+four.cluster.beta_30 <- rbind(beta_30_1,beta_30_2,beta_30_3,beta_30_4)
+four.cluster.beta_30$term <- c("cluster 1","cluster 2", "cluster 3", "cluster 4")
+
+# Prediction 
+
+m <- glm((bmi>=30) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial, data = CSS_track[CSS_track$imputation==1,])
+m$coefficients <- beta_30_1$pooled$estimate
+
+MSE30_4clustprob <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=30))^2)
+
+
+## Maximal assignment - compare with results from above
+## 6 clusters
+m30_6clustmax <- pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:4,]
+
+# Prediction
+
+m <- glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial, data = CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m30_6clustmax$pooled$estimate
+
+MSE30_6clustmax <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=30))^2)
+
+
+## 4 clusters
+m30_4clustmax <- pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial)))
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:6,]
+
+# Prediction
+
+m <- glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial, data = CSS_track[CSS_track$imputation==1,])
+m$coefficients <- m30_4clustmax$pooled$estimate
+
+MSE30_4clustmax <- mean((expit(predict(m,newdata = CSS_track[CSS_track$imputation!=0,]))- (CSS_track$bmi[CSS_track$imputation!=0]>=30))^2)
+
+
+## Self score:
+
+## >=25
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:4,]
+summary(pool(with(CSS_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:4,]
+
+## >=30
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:4,]
+summary(pool(with(CSS_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)[1:4,]
+
+
+
+## Numeric BMI - Not of interest in this sample at present time (as we already have the cross-sectional look at base data)
+
+#Without adjustment for tracking:
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("bmi","mobileUseNight","mobileUseBeforeSleep","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoT <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_CSSTrackNoT$qbar
+pool_inf_CSSTrackNoT$ubar
+pool_inf_CSSTrackNoT$pval
+
+summary(pool_inf_CSSTrackNoT)
+
+lowerNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[3,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[3,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[3,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[4,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[4,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[4,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[5,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[5,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[5,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[6,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[6,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[6,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[7,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[7,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[7,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[8,5]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[8,1]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoT)[8,6]+10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+
+confints_CSSTrackNoT <- cbind(c(lowerNight2,lowerNight3,lowerNight4,lowerBS2,lowerBS3,lowerBS4,lowerBS5),
+                              c(estNight2,estNight3,estNight4,estBS2,estBS3,estBS4,estBS5),
+                              c(upperNight2,upperNight3,upperNight4,upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+
+#Trends:
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("mobileUseNight","mobileUseBeforeSleep","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoTTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_CSSTrackNoTTrend$qbar
+pool_inf_CSSTrackNoTTrend$ubar
+pool_inf_CSSTrackNoTTrend$pval
+
+summary(pool_inf_CSSTrackNoTTrend)
+
+lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[3,5]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[3,1]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoTTrend)[3,6]+10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+
+confints_CSSTrackNoTTrend <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value,
+                                   c(lowerCatBS,estCatBS,upperCatBS) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
+
+
+#Without adjustment for selfScore (i.e. with adjustment for tracking) with six clusters: 
+
+#Reference 1
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal1.1","ilrX6.orthogonal1.2","ilrX6.orthogonal1.3","ilrX6.orthogonal1.4","ilrX6.orthogonal1.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust1 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 2
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal2.1","ilrX6.orthogonal2.2","ilrX6.orthogonal2.3","ilrX6.orthogonal2.4","ilrX6.orthogonal2.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 3
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal3.1","ilrX6.orthogonal3.2","ilrX6.orthogonal3.3","ilrX6.orthogonal3.4","ilrX6.orthogonal3.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 4
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal4.1","ilrX6.orthogonal4.2","ilrX6.orthogonal4.3","ilrX6.orthogonal4.4","ilrX6.orthogonal4.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+
+# Reference 5
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal5.1","ilrX6.orthogonal5.2","ilrX6.orthogonal5.3","ilrX6.orthogonal5.4","ilrX6.orthogonal5.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 6
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+##
+
+confints_CSSTrackNoS_Six <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
+                                  c(estClust1,estClust2,estClust3,estClust4,estClust5,estClust6),
+                                  c(upperClust1,upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction error - matching parametrizations
+
+m <- gamlss(bmi~(ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_CSSTrackNoS$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_CSSTrackNoS$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_CSSTrackNoS$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmiCSS <- predict(m, newdata = CSS_track[CSS_track$imputation!=0,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","gender","education","occupation","sample_weights","imputation")])
+
+MSEbmiCSSsixprob <- mean((predbmiCSS - CSS_track$bmi[CSS_track$imputation!=0])^2)
+
+
+## Without adjustment for selfScore (i.e. with adjustment for tracking) with four clusters:
+
+#Reference 1 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX4.orthogonal1.1","ilrX4.orthogonal1.2","ilrX4.orthogonal1.3","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust1 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 2 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX4.orthogonal2.1","ilrX4.orthogonal2.2","ilrX4.orthogonal2.3","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 3 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX4.orthogonal3.1","ilrX4.orthogonal3.2","ilrX4.orthogonal3.3","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 4 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+##
+
+confints_CSSTrackNoS_Four <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4),
+                                   c(estClust1,estClust2,estClust3,estClust4),
+                                   c(upperClust1,upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction error - matching parametrizations
+
+m <- gamlss(bmi~(ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_CSSTrackNoS$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_CSSTrackNoS$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_CSSTrackNoS$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmiCSS <- predict(m, newdata = CSS_track[CSS_track$imputation!=0,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","gender","education","occupation","sample_weights","imputation")])
+
+MSEbmiCSSfourprob  <- mean((predbmiCSS - CSS_track$bmi[CSS_track$imputation!=0])^2)
+
+## Level curves of prediction surface on ternary plot
+pop_data <- #constructed prediction surface for level curves, take pop_track and change the probs. Then use predict.
+  ggtern(data=pop_data,aes(x=prob1,y=prob2, z=prob3)) +
+  geom_point() #color ~ bmi
+
+
+## Maximal posterior probability assignment 6 clusters
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(cluster+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+pool_inf_CSSTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[5,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[5,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[5,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[6,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[6,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[6,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+confints_CSSTrackNoS_mpSix <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
+                                    c(estClust1,estClust2,estClust3,estClust4,estClust5,estClust6),
+                                    c(upperClust1,upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction
+
+m <- gamlss(bmi~(cluster+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmiCSS <- predict(m, newdata = CSS_track[CSS_track$imputation!=0,c("cluster","bmi","age","gender","education","occupation","sample_weights","imputation")])
+
+MSEbmiCSSsixmax  <- mean((predbmiCSS - CSS_track$bmi[CSS_track$imputation!=0])^2)
+
+
+## Maximal posterior probability assignment 4 clusters
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(cluster.y+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster.y","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_CSSTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[2,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[3,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,5]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,1]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_CSSTrackNoS_mp)[4,6]+10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+confints_CSSTrackNoS_mpFour <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4),
+                                     c(estClust1,estClust2,estClust3,estClust4),
+                                     c(upperClust1,upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_CSSTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction
+
+m <- gamlss(bmi~(cluster.y+age+gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(CSS_track[,c("cluster.y","bmi","age","gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_CSSTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmiCSS <- predict(m, newdata = CSS_track[CSS_track$imputation!=0,c("cluster.y","bmi","age","gender","education","occupation","sample_weights","imputation")])
+
+MSEbmiCSSfourmax  <- mean((predbmiCSS - CSS_track$bmi[CSS_track$imputation!=0])^2)
+
 
 
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
 
-#Tracking data: Population sample (random sample) - same analysis
+#Tracking data: Population sample (random sample) - analyses of numerical bmi and of indicators
 
 hist(pop_track$bmi,breaks=50,xlim=c(0,50))
 
@@ -605,171 +1300,14 @@ ggplot(pop_track, aes(x = factor(cluster))) +
 
 ## Continuous Outcome
 
-#With gamlss:
-coefs <- list()
-ses <- list()
-vcovs <- list()
-
-for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG) #Alternative is BCT, but fits with many many degrees of freedom, suggesting no real difference between BCCG and BCT.
-  m_sum <- summary(m)
-  coefs[[i]] <- m_sum[,1]
-  ses[[i]] <- m_sum[,2]
-  vcovs[[i]] <- vcov(m)
-}
-plot(m)
-
-pool_inf_PopTrack <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_PopTrack$qbar
-pool_inf_PopTrack$ubar
-pool_inf_PopTrack$pval
-
-summary(pool_inf_PopTrack)
-
-#Profile intervals: 
-lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[2,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[2,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[2,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[3,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[3,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[3,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[4,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[4,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[4,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[5,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[5,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[5,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[6,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[6,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[6,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[7,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[7,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[7,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[8,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[8,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[8,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[9,5]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[9,1]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrack)[9,6]+10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-confints_PopTrack <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6,lowerCat2,lowerCat3,lowerCat4),
-                           c(estClust2,estClust3,estClust4,estClust5,estClust6,estCat2,estCat3,estCat4),
-                           c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6,upperCat2,upperCat3,upperCat4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrack$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrack$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-rownames(confints_PopTrack) <- names(pool_inf_PopTrack$qbar)[2:9]
-
-#Trends:
-
-
-#SelfScore
-coefs <- list()
-ses <- list()
-vcovs <- list()
-
-for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+as.numeric(selfScoreCat)+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-  m_sum <- summary(m)
-  coefs[[i]] <- m_sum[,1]
-  ses[[i]] <- m_sum[,2]
-  vcovs[[i]] <- vcov(m)
-}
-
-pool_inf_PopTrackSTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_PopTrackSTrend$qbar
-pool_inf_PopTrackSTrend$ubar
-pool_inf_PopTrackSTrend$pval
-
-summary(pool_inf_PopTrackSTrend) #Get the p value for trend from here, as sigma and nu are constant.
-
-lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[3,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[3,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[3,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[4,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[4,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[4,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[5,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[5,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[5,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[6,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[6,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[6,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[7,5]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[7,1]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackSTrend)[7,6]+10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-confints_PopTrackSTrend <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6,lowerCat),
-                           c(estClust2,estClust3,estClust4,estClust5,estClust6,estCat),
-                           c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6,upperCat))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-#Track
-coefs <- list()
-ses <- list()
-vcovs <- list()
-
-for (i in 1:N_imp){
-  m <- gamlss(bmi~(track_severity+selfScoreCat+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation","track_severity")],imputation==i)),family = BCCG)
-  m_sum <- summary(m)
-  coefs[[i]] <- m_sum[,1]
-  ses[[i]] <- m_sum[,2]
-  vcovs[[i]] <- vcov(m)
-}
-
-pool_inf_PopTrackTTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_PopTrackTTrend$qbar
-pool_inf_PopTrackTTrend$ubar
-pool_inf_PopTrackTTrend$pval #Get the p value for trend from here, as sigma and nu are constant.
-
-summary(pool_inf_PopTrackTTrend)#Get the p value for trend from here, as sigma and nu are constant.
-
-lowerTrack <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estTrack <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperTrack <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[3,5]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[3,1]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[3,6]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[4,5]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[4,1]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[4,6]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[5,5]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[5,1]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackTTrend)[5,6]+10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-confints_PopTrackTTrend <- cbind(c(lowerTrack,lowerCat2,lowerCat3,lowerCat4),
-                                 c(estTrack,estCat2,estCat3,estCat4),
-                                 c(upperTrack,upperCat2,upperCat3,upperCat4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-
-
-
 
 #Without adjustment for tracking:
 coefs <- list()
 ses <- list()
 vcovs <- list()
 
-for (i in 1:N_imp){
-  m <- gamlss(bmi~(selfScoreCat+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+for (i in 1:N_imp){ #Slow
+  m <- gamlss(bmi~(mobileUseNight+mobileUseBeforeSleep+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("bmi","mobileUseNight","mobileUseBeforeSleep","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -783,31 +1321,47 @@ pool_inf_PopTrackNoT$pval
 
 summary(pool_inf_PopTrackNoT)
 
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[6,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[6,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[6,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[7,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[7,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[7,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[8,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[8,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[8,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-confints_PopTrackNoT <- cbind(c(lowerCat2,lowerCat3,lowerCat4),
-                                 c(estCat2,estCat3,estCat4),
-                                 c(upperCat2,upperCat3,upperCat4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+confints_PopTrackNoT <- cbind(c(lowerNight2,lowerNight3,lowerNight4,lowerBS2,lowerBS3,lowerBS4,lowerBS5),
+                                 c(estNight2,estNight3,estNight4,estBS2,estBS3,estBS4,estBS5),
+                                 c(upperNight2,upperNight3,upperNight4,upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-#Trend:
+#Trends:
 coefs <- list()
 ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(as.numeric(selfScoreCat)+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("mobileUseNight","mobileUseBeforeSleep","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -821,21 +1375,29 @@ pool_inf_PopTrackNoTTrend$pval
 
 summary(pool_inf_PopTrackNoTTrend)
 
-lowerCat <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCat <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCat <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-confints_PopTrackNoTTrend <- c(lowerCat,estCat,upperCat) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[3,5]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[3,1]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[3,6]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
+confints_PopTrackNoTTrend <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value,
+                                   c(lowerCatBS,estCatBS,upperCatBS) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
 
-#Without adjustment for selfScore:
+
+#Without adjustment for selfScore (i.e. with adjustment for tracking) with six clusters: 
+
+#Reference 1
+
 coefs <- list()
 ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal1.1","ilrX6.orthogonal1.2","ilrX6.orthogonal1.3","ilrX6.orthogonal1.4","ilrX6.orthogonal1.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -843,63 +1405,412 @@ for (i in 1:N_imp){
 }
 
 pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_PopTrackNoS$qbar
-pool_inf_PopTrackNoS$ubar
-pool_inf_PopTrackNoS$pval
 
-summary(pool_inf_PopTrackNoS)
+lowerClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust1 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+# Reference 2
 
-lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[3,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[3,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[3,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[4,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[4,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[4,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[5,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[5,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[5,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[6,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[6,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[6,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-confints_PopTrackNoS <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
-                                 c(estClust2,estClust3,estClust4,estClust5,estClust6),
-                                 c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-
-
-#Trend:
 coefs <- list()
 ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(track_severity+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster2prob","cluster3prob","cluster4prob","cluster5prob","cluster6prob","bmi","selfScoreCat","age","Gender","education","occupation","sample_weights","imputation","track_severity")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal2.1","ilrX6.orthogonal2.2","ilrX6.orthogonal2.3","ilrX6.orthogonal2.4","ilrX6.orthogonal2.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_PopTrackNoSTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-pool_inf_PopTrackNoSTrend$qbar
-pool_inf_PopTrackNoSTrend$ubar
-pool_inf_PopTrackNoSTrend$pval
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
-summary(pool_inf_PopTrackNoSTrend)
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerTrack <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoSTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estTrack <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoSTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperTrack <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoSTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoSTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+# Reference 3
 
-confints_PopTrackNoSTrend <- c(lowerTrack,estTrack,upperTrack)
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal3.1","ilrX6.orthogonal3.2","ilrX6.orthogonal3.3","ilrX6.orthogonal3.4","ilrX6.orthogonal3.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 4
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal4.1","ilrX6.orthogonal4.2","ilrX6.orthogonal4.3","ilrX6.orthogonal4.4","ilrX6.orthogonal4.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+
+# Reference 5
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal5.1","ilrX6.orthogonal5.2","ilrX6.orthogonal5.3","ilrX6.orthogonal5.4","ilrX6.orthogonal5.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 6
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+##
+
+confints_PopTrackNoS_Six <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
+                                 c(estClust1,estClust2,estClust3,estClust4,estClust5,estClust6),
+                                 c(upperClust1,upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction error - matching parametrizations
+
+m <- gamlss(bmi~(ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_PopTrackNoS$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_PopTrackNoS$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_PopTrackNoS$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmipop_six <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("ilrX6.orthogonal6.1","ilrX6.orthogonal6.2","ilrX6.orthogonal6.3","ilrX6.orthogonal6.4","ilrX6.orthogonal6.5","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+
+MSEbmipopsixprob <- mean((predbmipop_six - pop_track$bmi[pop_track$imputation!=0])^2)
+
+
+## Without adjustment for selfScore (i.e. with adjustment for tracking) with four clusters:
+
+#Reference 1 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX4.orthogonal1.1","ilrX4.orthogonal1.2","ilrX4.orthogonal1.3","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust1 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust1 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 2 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX4.orthogonal2.1","ilrX4.orthogonal2.2","ilrX4.orthogonal2.3","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 3 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX4.orthogonal3.1","ilrX4.orthogonal3.2","ilrX4.orthogonal3.3","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+# Reference 4 (4)
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+##
+
+confints_PopTrackNoS_Four <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4),
+                              c(estClust1,estClust2,estClust3,estClust4),
+                              c(upperClust1,upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+## prediction error - matching parametrizations
+
+m <- gamlss(bmi~(ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==1)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_PopTrackNoS$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_PopTrackNoS$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_PopTrackNoS$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmipop_four <- predict(m,type="response",newdata = pop_track[pop_track$imputation!=0,c("ilrX4.orthogonal4.1","ilrX4.orthogonal4.2","ilrX4.orthogonal4.3","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+
+MSEbmipopfourprob <- mean((predbmipop_four - pop_track$bmi[pop_track$imputation!=0])^2)
+
+
+## Level curves of prediction surface on ternary plot - four clusters
+
+pop_plot <- pop_track[pop_track$imputation==1,c("bmi","age","Gender","education","occupation","sample_weights","imputation")]#constructed prediction surface for level curves, take pop_track and change the probs (fix other covariates). Then use predict.
+pop_plot$Gender <- "Male"
+pop_plot$age <- 30
+pop_plot$education <- "long cycle higher education"
+pop_plot$occupation <- "employed"
+
+pop_plot <- pop_plot[1:2400,-c(6,7)]
+pop_plot$prob1 <- 0
+pop_plot$prob2 <- c(rep(0.01,600),rep(0.25,600),rep(0.50,600),rep(0.75,600))
+pop_plot$prob3 <- 0
+pop_plot$prob4 <- 0
+
+pop_plot$prob1[1:200] <- runif(n=200,0,(1-pop_plot$prob2)[1:200])
+pop_plot$prob3[1:200] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob2)[1:200])
+pop_plot$prob4[1:200] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob3-pop_plot$prob2)[1:200])
+
+pop_plot$prob3[201:400] <- runif(n=200,0,(1-pop_plot$prob2)[201:400])
+pop_plot$prob4[201:400] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob2)[201:400])
+pop_plot$prob1[201:400] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob4-pop_plot$prob2)[201:400])
+
+pop_plot$prob4[401:600] <- runif(n=200,0,(1-pop_plot$prob2)[401:600])
+pop_plot$prob1[401:600] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob2)[401:600])
+pop_plot$prob3[401:600] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob1-pop_plot$prob2)[401:600])
+
+#
+pop_plot$prob1[601:800] <- runif(n=200,0,(1-pop_plot$prob2)[601:800])
+pop_plot$prob3[601:800] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob2)[601:800])
+pop_plot$prob4[601:800] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob3-pop_plot$prob2)[601:800])
+
+pop_plot$prob3[801:1000] <- runif(n=200,0,(1-pop_plot$prob2)[801:1000])
+pop_plot$prob4[801:1000] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob2)[801:1000])
+pop_plot$prob1[801:1000] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob4-pop_plot$prob2)[801:1000])
+
+pop_plot$prob4[1001:1200] <- runif(n=200,0,(1-pop_plot$prob2)[1001:1200])
+pop_plot$prob1[1001:1200] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob2)[1001:1200])
+pop_plot$prob3[1001:1200] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob1-pop_plot$prob2)[1001:1200])
+
+#
+pop_plot$prob1[1201:1400] <- runif(n=200,0,(1-pop_plot$prob2)[1201:1400])
+pop_plot$prob3[1201:1400] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob2)[1201:1400])
+pop_plot$prob4[1201:1400] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob3-pop_plot$prob2)[1201:1400])
+
+pop_plot$prob3[1401:1600] <- runif(n=200,0,(1-pop_plot$prob2)[1401:1600])
+pop_plot$prob4[1401:1600] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob2)[1401:1600])
+pop_plot$prob1[1401:1600] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob4-pop_plot$prob2)[1401:1600])
+
+pop_plot$prob4[1601:1800] <- runif(n=200,0,(1-pop_plot$prob2)[1601:1800])
+pop_plot$prob1[1601:1800] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob2)[1601:1800])
+pop_plot$prob3[1601:1800] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob1-pop_plot$prob2)[1601:1800])
+
+#
+pop_plot$prob1[1801:2000] <- runif(n=200,0,(1-pop_plot$prob2)[1801:2000])
+pop_plot$prob3[1801:2000] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob2)[1801:2000])
+pop_plot$prob4[1801:2000] <- runif(n=200,0,(1-pop_plot$prob1-pop_plot$prob3-pop_plot$prob2)[1801:2000])
+
+pop_plot$prob3[2001:2200] <- runif(n=200,0,(1-pop_plot$prob2)[2001:2200])
+pop_plot$prob4[2001:2200] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob2)[2001:2200])
+pop_plot$prob1[2001:2200] <- runif(n=200,0,(1-pop_plot$prob3-pop_plot$prob4-pop_plot$prob2)[2001:2200])
+
+pop_plot$prob4[2201:2400] <- runif(n=200,0,(1-pop_plot$prob2)[2201:2400])
+pop_plot$prob1[2201:2400] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob2)[2201:2400])
+pop_plot$prob3[2201:2400] <- runif(n=200,0,(1-pop_plot$prob4-pop_plot$prob1-pop_plot$prob2)[2201:2400])
+
+
+ilr_coord <- Orthogonal.coordinate.generator(pop_plot[,c("prob1","prob2","prob3","prob4")],4)
+pop_plot$ilrX4.orthogonal4.1 <- ilr_coord[,1]
+pop_plot$ilrX4.orthogonal4.2 <- ilr_coord[,2]
+pop_plot$ilrX4.orthogonal4.3 <- ilr_coord[,3]  
+
+preds <- predict(m,newdata=pop_plot[,-c(6,7,8,9)])
+
+ggtern(data=pop_plot[1:600,],aes(x=prob1,y=prob3, z=prob4)) +
+  geom_point(size=3.0,aes(color=preds[1:600])) +scale_color_gradient2(midpoint=24, low="blue", mid="orange", high="darkred") #color ~ predbmi
+
+ggtern(data=pop_plot[601:1200,],aes(x=prob1,y=prob3, z=prob4)) +
+  geom_point(size=3.0,aes(color=preds[601:1200]))+scale_color_gradient2(midpoint=24, low="blue", mid="orange", high="darkred") #color ~ bmi
+
+ggtern(data=pop_plot[1201:1800,],aes(x=prob1,y=prob3, z=prob4)) +
+  geom_point(size=3.0,aes(color=preds[1201:1800]))+scale_color_gradient2(midpoint=24, low="blue", mid="orange", high="darkred") #color ~ bmi
+
+ggtern(data=pop_plot[1801:2400,],aes(x=prob1,y=prob3, z=prob4)) +
+  geom_point(size=3.0,aes(color=preds[1801:2400]))+scale_color_gradient2(midpoint=24, low="blue", mid="orange", high="darkred") #color ~ bmi
+
+
+
+## Maximal posterior probability assignment 6 clusters
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(cluster+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+pool_inf_PopTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[5,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[5,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[5,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[6,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust6 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[6,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[6,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+confints_PopTrackNoS_mpSix <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
+                              c(estClust1,estClust2,estClust3,estClust4,estClust5,estClust6),
+                              c(upperClust1,upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+## prediction
+
+m <- gamlss(bmi~(cluster+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmipop_sixmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+
+MSEbmipopsixmax <- mean((predbmipop_sixmax - pop_track$bmi[pop_track$imputation!=0])^2)
+
+
+## Maximal posterior probability assignment 4 clusters
+
+coefs <- list()
+ses <- list()
+vcovs <- list()
+
+for (i in 1:N_imp){
+  m <- gamlss(bmi~(cluster.y+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m_sum <- summary(m)
+  coefs[[i]] <- m_sum[,1]
+  ses[[i]] <- m_sum[,2]
+  vcovs[[i]] <- vcov(m)
+}
+
+pool_inf_PopTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[3,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+lowerClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estClust4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[4,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+
+confints_PopTrackNoS_mpFour <- cbind(c(lowerClust1,lowerClust2,lowerClust3,lowerClust4),
+                              c(estClust1,estClust2,estClust3,estClust4),
+                              c(upperClust1,upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+## prediction
+
+m <- gamlss(bmi~(cluster.y+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+
+m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
+m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
+
+predbmipop_fourmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+
+MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputation!=0])^2)
 
 
 # --------------------------------------------------------------------------- ##
@@ -908,79 +1819,196 @@ confints_PopTrackNoSTrend <- c(lowerTrack,estTrack,upperTrack)
 
 ## BMI > 25
 
-## Clusters and BMI<25 
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom25No <- summary(pool(Random25No), conf.int=T)
-cbind(exp(modelRandom25No$estimate),
-exp(modelRandom25No$`2.5 %`),
-exp(modelRandom25No$`97.5 %`))
+## clusters and BMI>25 (no adjustment for selfScoreCat) - six clusters
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_1 <- modelRandom25No[2,]
 
-#test for trend  (clusters as numeric)
-Random25NoSest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(track_severity)+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random25NoSest), conf.int=T)
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_2 <- modelRandom25No[2,]
 
-## self-reported smartphone use
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_3 <- modelRandom25No[2,]
 
-## night-time smartphone use and BMI >25
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_4 <- modelRandom25No[2,]
+
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_5 <- modelRandom25No[2,]
+
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_6 <- modelRandom25No[2,]
+
+beta_25_random_sum <- rbind(beta_25_random_1,beta_25_random_2,beta_25_random_3,beta_25_random_4,beta_25_random_5,beta_25_random_6)
+
+# prediction - matching parametrizations
+m <- glm((bmi>=25) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random25No)$pooled$estimate
+predpopbin25_six <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin25_predsix <- mean((expit(predpopbin25_six)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
+
+
+## Four clusters
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_1 <- modelRandom25No[2,]
+
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_2 <- modelRandom25No[2,]
+
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_3 <- modelRandom25No[2,]
+
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No <- summary(pool(Random25No), conf.int = T)
+beta_25_random_4 <- modelRandom25No[2,]
+
+beta_25_random_sum <- rbind(beta_25_random_1,beta_25_random_2,beta_25_random_3,beta_25_random_4)
+
+# prediction - matching parametrizations
+m <- glm((bmi>=25) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random25No)$pooled$estimate
+predpopbin25_four <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin25_predfour <- mean((expit(predpopbin25_four)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
+
+
+## Maximal posterior probability assignment
+
+
+# Six clusters
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No_mpSix <- summary(pool(Random25No), conf.int = T)
+m <- glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random25No)$pooled$estimate
+predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
+
+# Four clusters
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
+m <- glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random25No)$pooled$estimate
+predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
+
+
+
+## SelfScoreCat and BMI>25 (no adjustment for tracking)
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25Night <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom25Night <- summary(pool(Random25Night), conf.int=T)
-cbind(exp(modelRandom25Night$estimate),
-      exp(modelRandom25Night$`2.5 %`),
-      exp(modelRandom25Night$`97.5 %`))
+Random25NoT <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom25NoT <- summary(pool(Random25NoT), conf.int=T)
+cbind(exp(modelRandom25NoT$estimate),
+exp(modelRandom25NoT$`2.5 %`),
+exp(modelRandom25NoT$`97.5 %`))
 
-## test for trend night-time use and BMI >25
-Random25NightTest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random25NightTest), conf.int=T)
-
-## smartphone use before sleep onset and BMI >25
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25Before <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom25Before <- summary(pool(Random25Before), conf.int=T)
-cbind(exp(modelRandom25Before$estimate),
-      exp(modelRandom25Before$`2.5 %`),
-      exp(modelRandom25Before$`97.5 %`))
-
-## test for trend smartphone use before sleep and BMI >25
-Random25BeforeTest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random25BeforeTest), conf.int=T)
+#test for trend (selfscoreCat uden cluster)
+Random25NoTest <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random25NoTest), conf.int=T)
 
 # --------------------------------------------------------------------------- ##
 ## BMI > 30
 
-## clusters and BMI>30 
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation), weights=sample_weights,family=binomial))
+## BMI >30 
+
+## clusters and BMI>30 (no adjustment for selfScoreCat) - six clusters
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No <- summary(pool(Random30No), conf.int = T)
-cbind(exp(modelRandom30No$estimate),
-exp(modelRandom30No$`2.5 %`),
-exp(modelRandom30No$`97.5 %`))
+beta_30_random_1 <- modelRandom30No[2,]
 
-## night-time smartphone use and BMI >30
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30Night <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom30Night <- summary(pool(Random30Night), conf.int=T)
-cbind(exp(modelRandom30Night$estimate),
-      exp(modelRandom30Night$`2.5 %`),
-      exp(modelRandom30Night$`97.5 %`))
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_2 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_3 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_4 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_5 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_6 <- modelRandom30No[2,]
+
+beta_30_random_sum <- rbind(beta_30_random_1,beta_30_random_2,beta_30_random_3,beta_30_random_4,beta_30_random_5,beta_30_random_6)
+
+# prediction - matching parametrizations
+m <- glm((bmi>=30) ~ (ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random30No)$pooled$estimate
+predpopbin30_six <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin30_predsix <- mean((expit(predpopbin30_six)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
+
+
+## Four clusters
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_1 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_2 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_3 <- modelRandom30No[2,]
+
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No <- summary(pool(Random30No), conf.int = T)
+beta_30_random_4 <- modelRandom30No[2,]
+
+beta_30_random_sum <- rbind(beta_30_random_1,beta_30_random_2,beta_30_random_3,beta_30_random_4)
+
+# prediction - matching parametrization
+m <- glm((bmi>=30) ~ (ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random30No)$pooled$estimate
+predpopbin30_four <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin30_predfour <- mean((expit(predpopbin30_four)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
+
+
+## Maximal posterior probability assignment
+
+# Six clusters
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No_mpSix <- summary(pool(Random30No), conf.int = T)
+m <- glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random30No)$pooled$estimate
+predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
+
+# Four clusters
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
+m <- glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m$coefficients <- pool(Random30No)$pooled$estimate
+predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+MSEpopbin30_predmaxfour <- mean((expit(predpopbin30_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
+
+
+## no adjustment for tracking
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+modelRandom30NoT <- summary(pool(Random30NoT), conf.int=T)
+cbind(exp(modelRandom30NoT$estimate),
+exp(modelRandom30NoT$`2.5 %`),
+exp(modelRandom30NoT$`97.5 %`))
 
 #test for trend (selfScoreCat as numeric and no adjustment for clusters)
-Random30Night <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random30Night), conf.int = T)
+Random30NoT <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(Random30NoT), conf.int = T)
 
-## smartphone use before sleep onset and BMI >30
-
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30Before <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
-modelRandom30Before <- summary(pool(Random30Before), conf.int=T)
-cbind(exp(modelRandom30Before$estimate),
-exp(modelRandom30Before$`2.5 %`),
-exp(modelRandom30Before$`97.5 %`))
-
-#test for trend (selfScoreCat as numeric and no adjustment for clusters)
-Random30Before <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
-summary(pool(Random30Before), conf.int = T)
 
 
 ###############################################################################
@@ -1000,22 +2028,41 @@ table(clinical_sample$bmi.clinical)
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
-## night-time smartphone use
-table(clinical_sample$mobileUseNight)
-clinical_sample$mobileUseNight <- factor(clinical_sample$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
+# --------------------------------------------------------------------------- ##
+## SelfScoreCat
 
-## smartphone use before sleep
-table(clinical_sample$mobileUseBeforeSleep)
-clinical_sample$mobileUseBeforeSleep <- factor(clinical_sample$mobileUseBeforeSleep, levels = c("Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
+clinical_sample$selfScore <- (clinical_sample$mobileUseBeforeSleep=="5-7 times per week")*4+(clinical_sample$mobileUseBeforeSleep=="2-4 times per week")*3+(clinical_sample$mobileUseBeforeSleep=="Once a week")*3+(clinical_sample$mobileUseBeforeSleep=="Every month or less")*2+(clinical_sample$mobileUseBeforeSleep=="Never")*1+
+  (clinical_sample$mobileUseNight=="Every night or almost every night")*4+(clinical_sample$mobileUseNight=="A few times a week")*3+(clinical_sample$mobileUseNight=="A few times a month or less")*2+(clinical_sample$mobileUseNight=="Never")*1+
+  (clinical_sample$mobileCheck==">20 times an hour")*4+(clinical_sample$mobileCheck=="11-20 times an hour")*4+(clinical_sample$mobileCheck=="5-10 times an hour")*3+(clinical_sample$mobileCheck=="1-4 times an hour")*2+(clinical_sample$mobileCheck=="Every 2nd hour")*2+(clinical_sample$mobileCheck=="Several times a day")*1+(clinical_sample$mobileCheck=="Once a day or less")*1+
+  (clinical_sample$pmpuScale<=14)*1+(clinical_sample$pmpuScale>14 & clinical_sample$pmpuScale<17)*2+(clinical_sample$pmpuScale>=17 & clinical_sample$pmpuScale<19)*3+(clinical_sample$pmpuScale>=19)*4
+summary(clinical_sample$selfScore[clinical_sample$imputation!=0])
+clinical_sample$selfScoreCat <- NA
+clinical_sample$selfScoreCat[!is.na(clinical_sample$selfScore)]<-"1"
+clinical_sample$selfScoreCat[clinical_sample$selfScore>=8]="2"
+clinical_sample$selfScoreCat[clinical_sample$selfScore>=10]="3"
+clinical_sample$selfScoreCat[clinical_sample$selfScore>=12]="4"
+table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0],useNA="always")/25
+clinical_sample$selfScoreCat <- as.factor(clinical_sample$selfScoreCat)
 
 # --------------------------------------------------------------------------- ##
 ## descriptive of clinical sample
 ## age
-publish(univariateTable(mobileUseNight ~ age.x,data=clinical_sample, column.percent=TRUE))/25
+publish(univariateTable(selfScoreCat ~ age.x,data=clinical_sample, column.percent=TRUE))/25
 clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 
 ## BMI
-publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+
+## categorize BMI
+clinical_sample$bmiCat[clinical_sample$bmi.clinical<25] <- "<25"
+clinical_sample$bmiCat[clinical_sample$bmi.clinical>=25 & clinical_sample$bmi.clinical<30] <- "25-30"
+clinical_sample$bmiCat[clinical_sample$bmi.clinical>=30] <- ">=30"
+table(clinical_sample$bmiCat, useNA="always")/26
+prop.table(table(clinical_sample$bmiCat, useNA="always"))
+table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always")/25
+prop.table(table(clinical_sample$selfScoreCat[clinical_sample$imputation!=0], clinical_sample$bmiCat[clinical_sample$imputation!=0], useNA="always"))
+publish(univariateTable(selfScoreCat ~ bmiCat,data=clinical_sample, column.percent=TRUE))
+
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
 
@@ -1025,9 +2072,9 @@ clinical_sample$bmi <- as.numeric(clinical_sample$bmi.clinical)
 clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi.clinical>=25)
 clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
 
-publish(univariateTable(mobileUseNight ~ bmi25,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ bmi25,data=clinical_sample, column.percent=TRUE))
 
-## age at clinical examination 
+## age at clinical examination (OBS. NOGET ER GALT I DENNE VARIABLE)
 table(clinical_sample$age.y, useNA="always")
 clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(clinical_sample$age.y,2+(mod(nchar(clinical_sample$age.y),4)==1),2+(mod(nchar(clinical_sample$age.y),4)==1)),".",
                  substr(clinical_sample$age.y,3+(mod(nchar(clinical_sample$age.y),4)!=3),3+(mod(nchar(clinical_sample$age.y),4)!=3))))
@@ -1037,24 +2084,21 @@ clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(
 
 ## systolic blood pressure
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
-publish(univariateTable(mobileUseNight ~ sbp,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ sbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ sbp,data=clinical_sample, column.percent=TRUE))
 
 # diastolic blood pressure
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
-publish(univariateTable(mobileUseNight ~ dbp,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ dbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ dbp,data=clinical_sample, column.percent=TRUE))
 
 ## hip waist ratio
 
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
-publish(univariateTable(mobileUseNight ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+
 
 ## bmi clinical
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
-publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
@@ -1077,34 +2121,28 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 
 ## HDL
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
-publish(univariateTable(mobileUseNight ~ hdl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ hdl,data=clinical_sample, column.percent=TRUE))
-
+publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
 
 ## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
-publish(univariateTable(mobileUseNight~ ldl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ ldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
 
 ## VLDL
 clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
-publish(univariateTable(mobileUseNight~ vldl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ vldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable( selfScoreCat~ vldl,data=clinical_sample, column.percent=TRUE))
 
 ## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
-publish(univariateTable(mobileUseNight ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
 ## triglycerides
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
-publish(univariateTable(mobileUseNight ~ triglycerids,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ triglycerids,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
 ## hba1c
 clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
-publish(univariateTable(mobileUseNight ~ hba1c,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ hba1c,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
+
 
 # --------------------------------------------------------------------------- ##
 
@@ -1118,200 +2156,402 @@ clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 #hdl
 #hdl_sum<-cbind(summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit))))$estimate[2:4],
 #      summary(pool(with(clinical_mids,lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
-lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))),sd=sd(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))))
-plot(residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
-plot(fitted(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+hist(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
+lines(seq(from=min(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),dnorm(x=seq(from=min(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),max(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),na.rm=T),length.out=100),mean=mean(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))),sd=sd(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))))
+plot(residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(fitted(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
 
-cbind(confint(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 
 #ldl 
-#ldl_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),breaks=20,prob=T)
-res=residuals(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit))
+#ldl_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),breaks=20,prob=T)
+res=residuals(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
-plot(fitted(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
+plot(residuals(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
+plot(fitted(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
 
-cbind(confint(glm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 #vldl
-#vldl_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
-res <- residuals(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
+#vldl_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
+res <- residuals(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(residuals(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
 
-cbind(confint(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),
-      cbind(coef(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))-1.96*summary(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2],
-            coef(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))+1.96*summary(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2]))
+cbind(confint(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),
+      cbind(coef(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))-1.96*summary(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2],
+            coef(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))+1.96*summary(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2]))
 
 
 #t_cholesterol
-#t_cholesterol_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#                summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(glm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
-res <- residuals(glm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
+#t_cholesterol_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#                summary(pool(with(data=clinical_mids, glm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(glm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
+res <- residuals(glm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
-plot(fitted(lm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(residuals(lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(fitted(lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
 
-cbind(confint(glm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 #triglycerids
-#tri_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
-res <- residuals(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
+#tri_sum<-cbind(summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, glm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),breaks=20,prob=T)
+res <- residuals(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
-plot(fitted(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(glm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(residuals(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
+plot(fitted(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),residuals(glm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)))
 
-cbind(confint(glm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),
-      cbind(coef(glm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))-1.96*summary(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2],
-            coef(glm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))+1.96*summary(glm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2]))
+cbind(confint(glm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit)),
+      cbind(coef(glm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))-1.96*summary(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2],
+            coef(glm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))+1.96*summary(glm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1), na.action=na.omit))$coefficients[,2]))
 
 #hba1c
-#hba1c_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),breaks=20,prob=T)
-res <- residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit))
+#hba1c_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
+plot(residuals(lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)),residuals(lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1),na.action=na.omit)))
 
 # bmi
-hist(residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
-res <- residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+hist(residuals(lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(residuals(lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-cbind(confint(glm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 
 #ratiowaisthip
-#wh_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation))))$std.error[2:4])
-hist(residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
-res <- residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+#wh_sum<-cbind(summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation))))$std.error[2:4])
+hist(residuals(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(residuals(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-cbind(confint(glm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 #sbp
-#sbp_sum<-cbind(summary(pool(with(data=clinical_mids, lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
-res <- residuals(lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+#sbp_sum<-cbind(summary(pool(with(data=clinical_mids, lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(sbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(residuals(lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(sbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-cbind(confint(glm(as.numeric(sbp) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(sbp) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(sbp) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(sbp) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 #dbp
-#dbp_sum<-cbind(summary(pool(with(data=clinical_mids, lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$estimate[2:4],
-#      summary(pool(with(data=clinical_mids, lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))))$std.error[2:4])
-hist(residuals(lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
-res <- residuals(lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1)))
+#dbp_sum<-cbind(summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$estimate[2:4],
+#      summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))))$std.error[2:4])
+hist(residuals(lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),breaks=20,prob=T)
+res <- residuals(lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1)))
 res_seq=seq(from=min(res),to=max(res),length.out=100)
 lines(res_seq,dnorm(res_seq,mean=mean(res),sd=sd(res)))
-plot(residuals(lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
-plot(fitted(lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(residuals(lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
+plot(fitted(lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))),residuals(lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation, data=subset(clinical_sample,imputation==1))))
 
-cbind(confint(glm(as.numeric(dbp) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
-      confint(lm(as.numeric(dbp) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
+cbind(confint(glm(as.numeric(dbp) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1))),
+      confint(lm(as.numeric(dbp) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age.x+education+occupation,na.action=na.omit,data=subset(clinical_sample,imputation==1)),type="Wald"))
 
 #Generally the residuals look reasonably centered, with a few positive outliers. The residual distributions on the first imputation actually look reasonably normal, save for the few (extreme) outliers.
 
 #Seems that these models are appropriate, and that normal approximations of confidence interval will be reasonable too. We can however also just use the profile likelihood CI's.
+#The vldl measure is the only one that has a right skewed distribution. (Do something particular about it?)
 
 #Wald confidence intervals
 
-dbp_int <- summary(pool(with(data=clinical_mids, lm(dbp ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_int <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster2prob+cluster3prob+cluster4prob+cluster5prob+cluster6prob+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+## Tracking: Six clusters 
+
+dbp_int1 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int2 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int3 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int4 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int5 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int6 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+
+dbp_int <- rbind(dbp_int1,dbp_int2,dbp_int3,dbp_int4,dbp_int5,dbp_int6)
+
+glu_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+
+glu_int <- rbind(glu_int1,glu_int2,glu_int3,glu_int4,glu_int5,glu_int6)
+
+hba1c_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+
+hba1c_int <- rbind(hba1c_int1,hba1c_int2,hba1c_int3,hba1c_int4,hba1c_int5,hba1c_int6)
+
+hdl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+
+hdl_int <- rbind(hdl_int1,hdl_int2,hdl_int3,hdl_int4,hdl_int5,hdl_int6)
+
+ldl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+
+ldl_int <- rbind(ldl_int1,ldl_int2,ldl_int3,ldl_int4,ldl_int5,ldl_int6)
+
+t_chol_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+
+t_chol_int <- rbind(t_chol_int1,t_chol_int2,t_chol_int3,t_chol_int4,t_chol_int5,t_chol_int6)
+
+sbp_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+
+sbp_int <- rbind(sbp_int1,sbp_int2,sbp_int3,sbp_int4,sbp_int5,sbp_int6)
+
+tri_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+
+tri_int <- rbind(tri_int1,tri_int2,tri_int3,tri_int4,tri_int5,tri_int6)
+
+vldl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+
+vldl_int <- rbind(vldl_int1,vldl_int2,vldl_int3,vldl_int4,vldl_int5,vldl_int6)
+
+wh_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+
+wh_int <- rbind(wh_int1,wh_int2,wh_int3,wh_int4,wh_int5,wh_int6)
+
+bmi_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal1.1+ilrX6.orthogonal1.2+ilrX6.orthogonal1.3+ilrX6.orthogonal1.4+ilrX6.orthogonal1.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal2.1+ilrX6.orthogonal2.2+ilrX6.orthogonal2.3+ilrX6.orthogonal2.4+ilrX6.orthogonal2.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal3.1+ilrX6.orthogonal3.2+ilrX6.orthogonal3.3+ilrX6.orthogonal3.4+ilrX6.orthogonal3.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal4.1+ilrX6.orthogonal4.2+ilrX6.orthogonal4.3+ilrX6.orthogonal4.4+ilrX6.orthogonal4.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int5 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal5.1+ilrX6.orthogonal5.2+ilrX6.orthogonal5.3+ilrX6.orthogonal5.4+ilrX6.orthogonal5.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int6 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX6.orthogonal6.1+ilrX6.orthogonal6.2+ilrX6.orthogonal6.3+ilrX6.orthogonal6.4+ilrX6.orthogonal6.5+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+bmi_int <- rbind(bmi_int1,bmi_int2,bmi_int3,bmi_int4,bmi_int5,bmi_int6)
+
+df_ints_Six <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
+
+names(df_ints_Six) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
+
+## Tracking: Four clusters
+
+dbp_int1 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int2 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int3 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+dbp_int4 <- summary(pool(with(data=clinical_mids, lm(dbp ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+
+dbp_int <- rbind(dbp_int1,dbp_int2,dbp_int3,dbp_int4)
+
+glu_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+glu_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+
+glu_int <- rbind(glu_int1,glu_int2,glu_int3,glu_int4)
+
+hba1c_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hba1c_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+
+hba1c_int <- rbind(hba1c_int1,hba1c_int2,hba1c_int3,hba1c_int4)
+
+hdl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+hdl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+
+hdl_int <- rbind(hdl_int1,hdl_int2,hdl_int3,hdl_int4)
+
+ldl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+ldl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+
+ldl_int <- rbind(ldl_int1,ldl_int2,ldl_int3,ldl_int4)
+
+t_chol_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+t_chol_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_chol_sum[,1]-1.96*t_chol_sum[,2],t_chol_sum[,1]+1.96*t_chol_sum[,2])
+
+t_chol_int <- rbind(t_chol_int1,t_chol_int2,t_chol_int3,t_chol_int4)
+
+sbp_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+sbp_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+
+sbp_int <- rbind(sbp_int1,sbp_int2,sbp_int3,sbp_int4)
+
+tri_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+tri_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+
+tri_int <- rbind(tri_int1,tri_int2,tri_int3,tri_int4)
+
+vldl_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+vldl_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+
+vldl_int <- rbind(vldl_int1,vldl_int2,vldl_int3,vldl_int4)
+
+wh_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+wh_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+
+wh_int <- rbind(wh_int1,wh_int2,wh_int3,wh_int4)
+
+bmi_int1 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX4.orthogonal1.1+ilrX4.orthogonal1.2+ilrX4.orthogonal1.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int2 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX4.orthogonal2.1+ilrX4.orthogonal2.2+ilrX4.orthogonal2.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int3 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX4.orthogonal3.1+ilrX4.orthogonal3.2+ilrX4.orthogonal3.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int4 <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ ilrX4.orthogonal4.1+ilrX4.orthogonal4.2+ilrX4.orthogonal4.3+age+education+occupation,na.action=na.omit))),conf.int=T)[2,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+bmi_int <- rbind(bmi_int1,bmi_int2,bmi_int3,bmi_int4)
+
+df_ints_Four <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
+
+names(df_ints_Four) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
+
+## Maximal posterior probability assignment: Six clusters
+
+dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+df_ints_mpSix <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
+
+names(df_ints_mpSix) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
+
+## Maximal posterior probability assignment: Four clusters
+
+dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+
+df_ints_mpFour <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
+
+names(df_ints_mpFour) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp","wh","glu","bmi")
 
 
-df_ints <- data.frame(rbind(hdl_int[2,],ldl_int[2,],vldl_int[2,],t_chol_int[2,],tri_int[2,],hba1c_int[2,],dbp_int[2,],sbp_int[2,],wh_int[2,],glu_int[2,],bmi_int[2,]),
-                            rbind(hdl_int[3,],ldl_int[3,],vldl_int[3,],t_chol_int[3,],tri_int[3,],hba1c_int[3,],dbp_int[3,],sbp_int[3,],wh_int[3,],glu_int[3,],bmi_int[3,]),
-                            rbind(hdl_int[4,],ldl_int[4,],vldl_int[4,],t_chol_int[4,],tri_int[4,],hba1c_int[4,],dbp_int[4,],sbp_int[4,],wh_int[4,],glu_int[4,],bmi_int[4,]),
-                            rbind(hdl_int[5,],ldl_int[5,],vldl_int[5,],t_chol_int[5,],tri_int[5,],hba1c_int[5,],dbp_int[5,],sbp_int[5,],wh_int[5,],glu_int[5,],bmi_int[5,]),
-                            rbind(hdl_int[6,],ldl_int[6,],vldl_int[6,],t_chol_int[6,],tri_int[6,],hba1c_int[6,],dbp_int[6,],sbp_int[6,],wh_int[6,],glu_int[6,],bmi_int[6,]))
+## Selfscore
 
-colnames(df_ints) <- c("type.2.estimate","type.2.lower","type.2.upper","type.2.pvalue","type.3.estimate","type.3.lower","type.3.upper","type.3.pvalue","type.4.estimate","type.4.lower","type.4.upper","type.4.pvalue",
-                             "type.5.estimate","type.5.lower","type.5.upper","type.5.pvalue","type.6.estimate","type.6.lower","type.6.upper","type.6.pvalue")
-rownames(df_ints) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
-df_ints
+predict.person <- data.frame("age"=18,education="",occupation="Employed")
 
-## Night-time smartphone use and biomarkers
-
-dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
+glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
+hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
+hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
+ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
+t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
+sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
+tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
+vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
+wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
 df_intsS <- data.frame(rbind(hdl_intS[2,],ldl_intS[2,],vldl_intS[2,],t_chol_intS[2,],tri_intS[2,],hba1c_intS[2,],dbp_intS[2,],sbp_intS[2,],wh_intS[2,],glu_intS[2,],bmi_intS[2,]),
                       rbind(hdl_intS[3,],ldl_intS[3,],vldl_intS[3,],t_chol_intS[3,],tri_intS[3,],hba1c_intS[3,],dbp_intS[3,],sbp_intS[3,],wh_intS[3,],glu_intS[3,],bmi_intS[3,]),
                       rbind(hdl_intS[4,],ldl_intS[4,],vldl_intS[4,],t_chol_intS[4,],tri_intS[4,],hba1c_intS[4,],dbp_intS[4,],sbp_intS[4,],wh_intS[4,],glu_intS[4,],bmi_intS[4,]))
-
-colnames(df_intsS) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
-rownames(df_intsS) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
-df_intsS
-
-
-## Smartphone use before sleep onset and biomarkers
-dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+gender+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-
-df_intsS <- data.frame(rbind(hdl_intS[2,],ldl_intS[2,],vldl_intS[2,],t_chol_intS[2,],tri_intS[2,],hba1c_intS[2,],dbp_intS[2,],sbp_intS[2,],wh_intS[2,],glu_intS[2,],bmi_intS[2,]),
-                       rbind(hdl_intS[3,],ldl_intS[3,],vldl_intS[3,],t_chol_intS[3,],tri_intS[3,],hba1c_intS[3,],dbp_intS[3,],sbp_intS[3,],wh_intS[3,],glu_intS[3,],bmi_intS[3,]),
-                       rbind(hdl_intS[4,],ldl_intS[4,],vldl_intS[4,],t_chol_intS[4,],tri_intS[4,],hba1c_intS[4,],dbp_intS[4,],sbp_intS[4,],wh_intS[4,],glu_intS[4,],bmi_intS[4,]))
 
 colnames(df_intsS) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
 rownames(df_intsS) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
