@@ -304,7 +304,7 @@ lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2
 estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
@@ -312,7 +312,7 @@ lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4
 estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,5]+1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,5]+1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 estCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
@@ -532,7 +532,7 @@ m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup
 
 model_summary_diff_Night <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 
-cbind(model_summary_diff_Night$estimate[17:20],model_summary_diff_Night$`2.5 %`[17:20],model_summary_diff_Night$`97.5 %`[17:20])
+cbind(model_summary_diff_Night$estimate[18:20],model_summary_diff_Night$`2.5 %`[18:20],model_summary_diff_Night$`97.5 %`[18:20])
 
 ## test for trend (mobileUseNight)
 test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
@@ -576,7 +576,7 @@ m <- lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(fo
 
 model_summary_diff_Before <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 
-cbind(model_summary_diff_Before$estimate[17:21],model_summary_diff_Before$`2.5 %`[17:21],model_summary_diff_Before$`97.5 %`[17:21])
+cbind(model_summary_diff_Before$estimate[18:21],model_summary_diff_Before$`2.5 %`[18:21],model_summary_diff_Before$`97.5 %`[18:21])
 
 ## test for trend (mobileUseBefore)
 test_numBefore <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseBeforeSleep.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
@@ -618,24 +618,24 @@ for (i in 1:N_imp){ #Slow
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_PopTrackNoT <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_PopTrackNoTNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
 
-lowerNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estNight2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estNight3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[3,5]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[3,1]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[3,6]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estNight4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[4,5]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estNight4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[4,1]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperNight4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[4,6]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-confints_PopTrackNoT <- cbind(c(lowerNight2,lowerNight3,lowerNight4),
-                                 c(estNight2,estNight3,estNight4,estBS2),
-                                 c(upperNight2,upperNight3,upperNight4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+confints_PopTrackNoTNight <- cbind(c(lowerNight2,lowerNight3,lowerNight4),
+                                   c(estNight2,estNight3,estNight4),
+                                   c(upperNight2,upperNight3,upperNight4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
 #Trend:
@@ -651,17 +651,18 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_PopTrackNoTTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_PopTrackNoTNightTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
-lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-confints_PopTrackNoTTrend <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
+confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
 
-## Smartphone use BeforeSleep and BMI continous in population sample
+## BeforeSleep
 
+#Without adjustment for tracking:
 coefs <- list()
 ses <- list()
 vcovs <- list()
@@ -674,29 +675,29 @@ for (i in 1:N_imp){ #Slow
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_PopTrackNoT <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_PopTrackNoTBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
 
-lowerBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estBS2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[2,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estBS3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[3,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[3,5]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS3 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[3,1]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[3,6]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estBS4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[4,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[4,5]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS4 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[4,1]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[4,6]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-lowerBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,5]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estBS5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,1]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoT)[5,6]+10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[5,5]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estBS5 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[5,1]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperBS5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[5,6]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-confints_PopTrackNoT <- cbind(c(lowerBS2,lowerBS3,lowerBS4,lowerBS5),
-                              c(estBS2,estBS3,estBS4,estBS5),
-                              c(upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoT$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+confints_PopTrackNoTBefore <- cbind(c(lowerBS2,lowerBS3,lowerBS4,lowerBS5),
+                                    c(estBS2,estBS3,estBS4,estBS5),
+                                    c(upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 #Trend:
 coefs <- list()
@@ -711,13 +712,13 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_PopTrackNoTTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+pool_inf_PopTrackNoTBeforeTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
-lowerCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+lowerCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
+upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-confints_PopTrackNoTTrend <- rbind(c(lowerCatBS,estCatBS,upperCatBS) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
+confints_PopTrackNoTTrendBefore <- rbind(c(lowerCatBS,estCatBS,upperCatBS) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
 
 
 ## Maximal posterior probability assignment 6 clusters
