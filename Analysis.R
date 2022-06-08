@@ -466,13 +466,13 @@ cbind(exp(model25Before$estimate),
 model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25 <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 
-exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
+exp(cbind(model_summary25$estimate[2:5],model_summary25$`2.5 %`[2:5],model_summary25$`97.5 %`[2:5]))
 
 ## smartphone use during the seep period
 model25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-model_summary25Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+model_summary25Night <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 
-exp(cbind(model_summary25Night$estimate[1:4],model_summary25Night$`2.5 %`[1:4],model_summary25Night$`97.5 %`[1:4]))
+exp(cbind(model_summary25Night$estimate[2:4],model_summary25Night$`2.5 %`[2:4],model_summary25Night$`97.5 %`[2:4]))
 
 ## test for trend (smartphone use before sleep)
 test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
@@ -499,8 +499,8 @@ testT25Night <- summary(pool(test25Night), conf.int = T)
 
 ## smartphone use before sleep
 model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+model_summary30 <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30$estimate[2:5],model_summary30$`2.5 %`[2:5],model_summary30$`97.5 %`[2:5]))
 
 ## test for trend
 test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
@@ -508,25 +508,16 @@ testT30 <- summary(pool(test30), conf.int=T)
 #anova(test30,model30)
 
 ## smartphone use during the sleep period
-model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
-
-## test for trend
-test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y))+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial)
-testT30 <- summary(pool(test30), conf.int=T)
-
-## magen til den ovenfor?
 model30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30Night<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+model_summary30Night <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+exp(cbind(model_summary30Night$estimate[2:4],model_summary30Night$`2.5 %`[2:4],model_summary30Night$`97.5 %`[2:4]))
 
 ## test for trend
 test30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-testT30Night <- summary(pool(test30Night), conf.int = T)
-#anova(test30,model30)
+testT30Night <- summary(pool(test30Night), conf.int=T)
 
-
+# --------------------------------------------------------------------------- ##
+## BMI continous
 
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
@@ -548,37 +539,29 @@ test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
-## smartphone use Before Sleep and changes in BMI
-
-# BeforeSleep
+## smartphone use Before Sleep and changes in BMI (OBS: gentagelse fra ovenstående??!?)
 
 ## from below 25 to above 25
-model25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-model_summary25Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
+#model25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+#model_summary25Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
+#exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 
 ## test for trend
-
-test25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-testT25Before <- summary(pool(test25Before), conf.int = T)
+#test25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
+#testT25Before <- summary(pool(test25Before), conf.int = T)
 #anova(test25,model25)
 
-
 ## from below 30 to above 30
-model30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
-
-
-## test for trend
-
-test30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-testT30Before <- summary(pool(test30Before), conf.int = T)
+#model30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+#model_summary30Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
+#exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
+# test for trend
+#test30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
+#testT30Before <- summary(pool(test30Before), conf.int = T)
 #anova(test30,model30)
 
-
-
+## smartphone use before sleep onset and bmi continous
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
@@ -612,21 +595,16 @@ test_TnumBefore <- summary(pool(test_numBefore), conf.int=T)
 
 hist(pop_track$bmi,breaks=50,xlim=c(0,50))
 
-ggplot(pop_track, aes(x = factor(selfScoreCat))) +
-  geom_bar()
 ggplot(pop_track, aes(x = factor(cluster))) +
   geom_bar()
 
 #analyses
 
-## regression analysis of clusters of night-time smartphone use and overweight/obesity #justeres for selfScoreCat?? ## hvad er de forskellige clusters?? ## fortolkning?? ## inkluderer imp_nr=0?
+## regression analysis of clusters of night-time smartphone use and overweight/obesity
 
 ## Continuous Outcome
 
-
-#Without adjustment for tracking:
-
-## Night:
+## Smartphone use during the sleep period and BMI continous in population sample:
 
 coefs <- list()
 ses <- list()
@@ -682,9 +660,8 @@ upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackN
 
 confints_PopTrackNoTTrend <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
 
-## BeforeSleep
+## Smartphone use BeforeSleep and BMI continous in population sample
 
-#Without adjustment for tracking:
 coefs <- list()
 ses <- list()
 vcovs <- list()
