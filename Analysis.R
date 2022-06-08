@@ -130,17 +130,6 @@ bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"
 
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
-#New idea: Try to make long format where followup and baseline are at different time points, and then make an interaction effect with time with bmi (indicators) as response.
-
-## virker ikke 07062022
-long_data <- data.frame("bmi"=c(bmi_followup$bmi.base,bmi_followup$bmi.fu),"userid"=rep(bmi_followup$userid,2),"sample_weights"=rep(bmi_followup$sample_weights.x,2),"gender"=rep(bmi_followup$gender.y,2),"age"=rep(bmi_followup$age.y,2),
-                        education=rep(bmi_followup$education.y,2),occupation=rep(bmi_followup$occupation.y,2),selfScoreCat = rep(bmi_followup$selfScoreCat.y,2),"followup"=c(rep(0,length(bmi_followup$bmi.base)),rep(1,length(bmi_followup$bmi.fu))),
-                        "imputation"=rep(bmi_followup$imputation,2),"time" = c(rep(0,length(bmi_followup$bmi.base)),bmi_followup$followup_time))
-
-#save(long_data,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/long_bmi.RData")
-
-long_data_mids <- as.mids(long_data,.imp="imputation")
-
 # --------------------------------------------------------------------------- ##
 #Population sample
 
@@ -248,33 +237,33 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_base <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-#pool_inf_base$qbar
-#pool_inf_base$ubar
-#pool_inf_base$ba
-#pool_inf_base$pval
+pool_inf_baseNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+#pool_inf_baseNight$qbar
+#pool_inf_baseNight$ubar
+#pool_inf_baseNight$ba
+#pool_inf_baseNight$pval
 
 
 #Seems that we can get stable contrats of the mean (taking in varying medians), in spite of skewness.
 
 #One slightly hacky way to achieve this may be to take one of the fitted models created by fit() and replace the stored coefficients with the final pooled estimates. I haven't done detailed testing but it seems to be working on this simple example:
-m$mu.coefficients <- pool_inf_base$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_base$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
+m$mu.coefficients <- pool_inf_baseNight$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
+m$nu.coefficients <- pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
 
 #Confidence intervals:
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,5],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,1],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,6],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[3,5],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[3,1],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[3,6],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[4,5],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[4,1],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[4,6],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
 ## estimates og 95%CI for mobileUseNight og continous BMI
 confints_base_Night <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
@@ -296,36 +285,36 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 
-pool_inf_base <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-#pool_inf_base$qbar
-#pool_inf_base$ubar
-#pool_inf_base$ba
-#pool_inf_base$pval
+pool_inf_baseBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+#pool_inf_baseBefore$qbar
+#pool_inf_baseBefore$ubar
+#pool_inf_baseBefore$ba
+#pool_inf_baseBefore$pval
 
 
 #Seems that we can get stable contrats of the mean (taking in varying medians), in spite of skewness.
 
 #One slightly hacky way to achieve this may be to take one of the fitted models created by fit() and replace the stored coefficients with the final pooled estimates. I haven't done detailed testing but it seems to be working on this simple example:
-m$mu.coefficients <- pool_inf_base$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_base$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
+m$mu.coefficients <- pool_inf_baseBefore$qbar[1:length(m$mu.coefficients)]
+m$sigma.coefficients <- pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
+m$nu.coefficients <- pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
 #Confidence intervals:
-lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[2,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[3,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat3 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[3,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,5],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[4,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[4,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
-lowerCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,5]+1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-estCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,1],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
-upperCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base)[5,6],sigma=exp(pool_inf_base$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_base$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+lowerCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,5]+1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value - integrate(function(y) y*dBCCG(x=y,mu=1,sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+estCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
+upperCat5 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[5,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 
 ## 95%CI for mobileUseBefore sleep og continuos BMI
 confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCat2,estCat3,estCat4,estCat5),c(upperCat2,upperCat3,upperCat4,upperCat5))
