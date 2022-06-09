@@ -611,7 +611,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){ #Slow
-  m <- gamlss(bmi~(mobileUseNight+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("bmi","mobileUseNight","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(mobileUseNight+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("bmi","mobileUseNight","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -644,7 +644,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(as.numeric(mobileUseNight)+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("mobileUseNight","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(as.numeric(mobileUseNight)+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("mobileUseNight","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -668,7 +668,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){ #Slow
-  m <- gamlss(bmi~(mobileUseBeforeSleep+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("bmi","mobileUseBeforeSleep","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(mobileUseBeforeSleep+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("bmi","mobileUseBeforeSleep","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -705,7 +705,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(as.numeric(mobileUseBeforeSleep)+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("mobileUseBeforeSleep","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("mobileUseBeforeSleep","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -728,7 +728,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(cluster+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -761,13 +761,13 @@ confints_PopTrackNoS_mpSix <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerC
                               c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction
 
-m <- gamlss(bmi~(cluster+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+m <- gamlss(bmi~(cluster+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
 
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
 
-predbmipop_sixmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+predbmipop_sixmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")])
 
 MSEbmipopsixmax <- mean((predbmipop_sixmax - pop_track$bmi[pop_track$imputation!=0])^2)
 
@@ -779,7 +779,7 @@ ses <- list()
 vcovs <- list()
 
 for (i in 1:N_imp){
-  m <- gamlss(bmi~(cluster.y+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+  m <- gamlss(bmi~(cluster.y+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
   m_sum <- summary(m)
   coefs[[i]] <- m_sum[,1]
   ses[[i]] <- m_sum[,2]
@@ -805,13 +805,13 @@ confints_PopTrackNoS_mpFour <- cbind(c(lowerClust2,lowerClust3,lowerClust4),
                               c(upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction
 
-m <- gamlss(bmi~(cluster.y+age+Gender+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
+m <- gamlss(bmi~(cluster.y+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
 
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
 
-predbmipop_fourmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster.y","bmi","age","Gender","education","occupation","sample_weights","imputation")])
+predbmipop_fourmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")])
 
 MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputation!=0])^2)
 
@@ -825,17 +825,17 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 ## Maximal posterior probability assignment
 
 # Six clusters
-Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpSix <- summary(pool(Random25No), conf.int = T)
-m <- glm((bmi>=25) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m <- glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
 predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
 # Four clusters
-Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
-m <- glm((bmi>=25) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
@@ -843,25 +843,25 @@ MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_
 
 
 ## SelfScoreCat and BMI>25 (no adjustment for tracking)
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTNight <- summary(pool(Random25NoTNight), conf.int=T)
 cbind(exp(modelRandom25NoTNight$estimate),
 exp(modelRandom25NoTNight$`2.5 %`),
 exp(modelRandom25NoTNight$`97.5 %`))
 
-summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random25NoTBefore <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random25NoTBefore <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTBefore <- summary(pool(Random25NoTBefore), conf.int=T)
 cbind(exp(modelRandom25NoTBefore$estimate),
       exp(modelRandom25NoTBEfore$`2.5 %`),
       exp(modelRandom25NoTBefore$`97.5 %`))
 
 #test for trend (selfscoreCat uden cluster)
-Random25NoTestNight <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25NoTestNight <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestNight), conf.int=T)
 
-Random25NoTestBefore <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random25NoTestBefore <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestBefore), conf.int=T)
 
 # --------------------------------------------------------------------------- ##
@@ -872,42 +872,42 @@ summary(pool(Random25NoTestBefore), conf.int=T)
 ## Maximal posterior probability assignment
 
 # Six clusters
-Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpSix <- summary(pool(Random30No), conf.int = T)
-m <- glm((bmi>=30) ~ (cluster+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m <- glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random30No)$pooled$estimate
 predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 # Four clusters
-Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
-m <- glm((bmi>=30) ~ (cluster.y+age+gender+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+m <- glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random30No)$pooled$estimate
 predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin30_predmaxfour <- mean((expit(predpopbin30_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 
 ## no adjustment for tracking
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30NoTNight <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30NoTNight <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTNight <- summary(pool(Random30NoTNight), conf.int=T)
 cbind(exp(modelRandom30NoTNight$estimate),
       exp(modelRandom30NoTNight$`2.5 %`),
       exp(modelRandom30NoTNight$`97.5 %`))
 
-summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
-Random30NoTBefore <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
+summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
+Random30NoTBefore <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTBefore <- summary(pool(Random30NoTBefore), conf.int=T)
 cbind(exp(modelRandom30NoTBefore$estimate),
       exp(modelRandom30NoTBEfore$`2.5 %`),
       exp(modelRandom30NoTBefore$`97.5 %`))
 
 #test for trend (selfscoreCat uden cluster)
-Random30NoTestNight <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30NoTestNight <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoTestNight), conf.int=T)
 
-Random30NoTestBefore <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseBeforeSleep)+age+gender+education+occupation), weights=sample_weights,family=binomial))
+Random30NoTestBefore <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoTestBefore), conf.int=T)
 
 
