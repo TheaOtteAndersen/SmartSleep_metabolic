@@ -846,8 +846,7 @@ predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
 
-
-## SelfScoreCat and BMI>25 (no adjustment for tracking)
+## smartphone use during the sleep period and BMI>25 in population sample
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTNight <- summary(pool(Random25NoTNight), conf.int=T)
@@ -855,6 +854,7 @@ cbind(exp(modelRandom25NoTNight$estimate),
 exp(modelRandom25NoTNight$`2.5 %`),
 exp(modelRandom25NoTNight$`97.5 %`))
 
+## ssmartphone use before sleep and BMI > 25 in population sample
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTBefore <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTBefore <- summary(pool(Random25NoTBefore), conf.int=T)
@@ -862,17 +862,17 @@ cbind(exp(modelRandom25NoTBefore$estimate),
       exp(modelRandom25NoTBEfore$`2.5 %`),
       exp(modelRandom25NoTBefore$`97.5 %`))
 
-#test for trend (selfscoreCat uden cluster)
+#test for trend:
+## smartphone use during the sleep period and BMI > 25
 Random25NoTestNight <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestNight), conf.int=T)
 
+## smartphone use before sleep onset and BMI > 25
 Random25NoTestBefore <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestBefore), conf.int=T)
 
 # --------------------------------------------------------------------------- ##
 ## BMI > 30
-
-## BMI >30 
 
 ## Maximal posterior probability assignment
 
@@ -893,7 +893,7 @@ predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin30_predmaxfour <- mean((expit(predpopbin30_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 
-## no adjustment for tracking
+## Smartphone use during the sleep period and BMI>30
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30NoTNight <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTNight <- summary(pool(Random30NoTNight), conf.int=T)
@@ -901,6 +901,7 @@ cbind(exp(modelRandom30NoTNight$estimate),
       exp(modelRandom30NoTNight$`2.5 %`),
       exp(modelRandom30NoTNight$`97.5 %`))
 
+## smartphone use before sleep onset and BMI >30
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30NoTBefore <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTBefore <- summary(pool(Random30NoTBefore), conf.int=T)
@@ -908,10 +909,12 @@ cbind(exp(modelRandom30NoTBefore$estimate),
       exp(modelRandom30NoTBEfore$`2.5 %`),
       exp(modelRandom30NoTBefore$`97.5 %`))
 
-#test for trend (selfscoreCat uden cluster)
+#test for trend 
+## smartphone use during the sleep period and BMI >30
 Random30NoTestNight <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoTestNight), conf.int=T)
 
+## smartphone use before sleep onset and BMI >30
 Random30NoTestBefore <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoTestBefore), conf.int=T)
 
@@ -934,7 +937,6 @@ clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
-
 # --------------------------------------------------------------------------- ##
 ## descriptive of clinical sample
 ## age
@@ -953,7 +955,7 @@ clinical_sample$bmi <- as.numeric(clinical_sample$bmi.clinical)
 clinical_sample$bmi25 <- as.numeric(clinical_sample$bmi.clinical>=25)
 clinical_sample$bmi30 <- as.numeric(clinical_sample$bmi.clinical>=30)
 
-## age at clinical examination (OBS. NOGET ER GALT I DENNE VARIABLE)
+## age at clinical examination 
 table(clinical_sample$age.y, useNA="always")
 clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(clinical_sample$age.y,2+(mod(nchar(clinical_sample$age.y),4)==1),2+(mod(nchar(clinical_sample$age.y),4)==1)),".",
                  substr(clinical_sample$age.y,3+(mod(nchar(clinical_sample$age.y),4)!=3),3+(mod(nchar(clinical_sample$age.y),4)!=3))))
@@ -963,21 +965,22 @@ clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(
 
 ## systolic blood pressure
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
-publish(univariateTable(selfScoreCat ~ sbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ sbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ sbp,data=clinical_sample, column.percent=TRUE))
 
 # diastolic blood pressure
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
-publish(univariateTable(selfScoreCat ~ dbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ dbp,data=clinical_sample, column.percent=TRUE))
 
 ## hip waist ratio
-
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
-publish(univariateTable(selfScoreCat ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
-
+publish(univariateTable(mobileUseNight ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 
 ## bmi clinical
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
-publish(univariateTable(selfScoreCat ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
@@ -1000,28 +1003,33 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 
 ## HDL
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
-publish(univariateTable(selfScoreCat ~ hdl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ hdl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ hdl,data=clinical_sample, column.percent=TRUE))
 
 ## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
-publish(univariateTable( selfScoreCat~ ldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight~ ldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep~ ldl,data=clinical_sample, column.percent=TRUE))
 
 ## VLDL
 clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
-publish(univariateTable( selfScoreCat~ vldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight~ vldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep~ vldl,data=clinical_sample, column.percent=TRUE))
 
 ## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
-publish(univariateTable(selfScoreCat ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
 ## triglycerides
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
-publish(univariateTable(selfScoreCat ~ triglycerids,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ triglycerids,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
 ## hba1c
 clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
-publish(univariateTable(selfScoreCat ~ hba1c,data=clinical_sample, column.percent=TRUE))
-
+publish(univariateTable(mobileUseNight ~ hba1c,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ hba1c,data=clinical_sample, column.percent=TRUE))
 
 # --------------------------------------------------------------------------- ##
 
