@@ -661,12 +661,10 @@ estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNo
 upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
+confints_PopTrackNoTTrendNight <- cbind(confints_PopTrackNoTTrendNight,summary(pool_inf_PopTrackNoTNightTrend)[2,4])
 
-## N p-value for test for trend??
 
-
-## Smartphone use BeforeSleep and BMI continous in population sample
-
+#
 
 coefs <- list()
 ses <- list()
@@ -724,7 +722,7 @@ estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBe
 upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 confints_PopTrackNoTTrendBefore <- rbind(c(lowerCatBS,estCatBS,upperCatBS) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
-
+confints_PopTrackNoTTrendBefore <- cbind(confints_PopTrackNoTTrendBefore,summary(pool_inf_PopTrackNoTBeforeTrend)[2,4])
 
 ## Maximal posterior probability assignment 6 clusters
 
@@ -906,7 +904,7 @@ summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+e
 Random30NoTBefore <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTBefore <- summary(pool(Random30NoTBefore), conf.int=T)
 cbind(exp(modelRandom30NoTBefore$estimate),
-      exp(modelRandom30NoTBEfore$`2.5 %`),
+      exp(modelRandom30NoTBefore$`2.5 %`),
       exp(modelRandom30NoTBefore$`97.5 %`))
 
 #test for trend 
