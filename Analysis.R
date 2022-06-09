@@ -967,20 +967,25 @@ clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age.y,1,1),substr(
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
 publish(univariateTable(mobileUseNight ~ sbp,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ sbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ sbp,data=clinical_sample, column.percent=TRUE))
 
 # diastolic blood pressure
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
 publish(univariateTable(mobileUseNight ~ dbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseBeforeSleep ~ dbp,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ dbp,data=clinical_sample, column.percent=TRUE))
 
 ## hip waist ratio
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
 publish(univariateTable(mobileUseNight ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 
 ## bmi clinical
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
@@ -1005,31 +1010,37 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
 publish(univariateTable(mobileUseNight ~ hdl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ hdl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ hdl,data=clinical_sample, column.percent=TRUE))
 
 ## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
 publish(univariateTable(mobileUseNight~ ldl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep~ ldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y~ ldl,data=clinical_sample, column.percent=TRUE))
 
 ## VLDL
 clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
 publish(univariateTable(mobileUseNight~ vldl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep~ vldl,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y~ vldl,data=clinical_sample, column.percent=TRUE))
 
 ## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
 publish(univariateTable(mobileUseNight ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
 ## triglycerides
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
 publish(univariateTable(mobileUseNight ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ triglycerids,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
 ## hba1c
 clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
 publish(univariateTable(mobileUseNight ~ hba1c,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseBeforeSleep ~ hba1c,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(cluster.y ~ hba1c,data=clinical_sample, column.percent=TRUE))
 
 # --------------------------------------------------------------------------- ##
 
@@ -1037,13 +1048,13 @@ publish(univariateTable(mobileUseBeforeSleep ~ hba1c,data=clinical_sample, colum
 table(clinical_sample$age.x)
 
 #Transforming to mids for modelling and inference
-
+table(clinical_sample$description.y, clinical_sample$cluster.y )
 clinical_sample$cluster.y <- factor(clinical_sample$cluster.y,levels = c("Cluster 3", "Cluster 2", "Cluster 4", "Cluster 1"))
 
 clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 
 
-## Maximal posterior probability assignment: Six clusters
+## Maximal posterior probability assignment: Six clusters (we use four clusters for clinical sample!)
 
 dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
@@ -1121,7 +1132,7 @@ vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUs
 wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
-## Self assesment: Night
+## Smartphone use during the sleep period and biomarkers
 
 predict.person <- data.frame("age"=18,education="",occupation="Employed")
 
