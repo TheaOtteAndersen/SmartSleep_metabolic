@@ -641,7 +641,7 @@ confints_PopTrackNoTNight <- cbind(c(lowerNight2,lowerNight3,lowerNight4),
                                    c(upperNight2,upperNight3,upperNight4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
 
-#Trend:
+#test for Trend (smartphone use during the sleep period and BMI contious in population sampple:
 coefs <- list()
 ses <- list()
 vcovs <- list()
@@ -660,12 +660,14 @@ lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackN
 estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
+confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
 
-confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNight) -  integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value)
+## N p-value for test for trend??
 
-## BeforeSleep
 
-#Without adjustment for tracking:
+## Smartphone use BeforeSleep and BMI continous in population sample
+
+
 coefs <- list()
 ses <- list()
 vcovs <- list()
