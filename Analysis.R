@@ -148,8 +148,9 @@ pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track
 
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
 
-table(pop_track$description, pop_track$cluster)
-pop_track$cluster <- factor(pop_track$cluster,levels = c("Cluster 3", "Cluster 2", "Cluster 4", "Cluster 1"))
+## omkategoriser 4 clusters
+table(pop_track$description.y, pop_track$cluster.y)
+pop_track$cluster.y <- factor(pop_track$cluster.y,levels = c("Cluster 3", "Cluster 2", "Cluster 4", "Cluster 1"))
 
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
@@ -793,7 +794,7 @@ predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
 # Four clusters
-Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
+Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpFour$estimate[2:4],modelRandom25No_mpFour$`2.5 %`[2:4],modelRandom25No_mpFour$`97.5 %`[2:4]))
 ## Prediction:
@@ -850,7 +851,7 @@ predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 # Four clusters
-Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
+Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
 exp(cbind(modelRandom30No_mpFour$estimate[2:4],modelRandom30No_mpFour$`2.5 %`[2:4],modelRandom30No_mpFour$`97.5 %`[2:4]))
 
