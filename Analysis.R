@@ -842,10 +842,12 @@ MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_tr
 # Four clusters
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
-## 
+exp(cbind(modelRandom25No_mpFour$estimate[2:4],modelRandom25No_mpFour$`2.5 %`[2:4],modelRandom25No_mpFour$`97.5 %`[2:4]))
+
+## ?
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
-
+## ?
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
@@ -854,17 +856,13 @@ MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTNight <- summary(pool(Random25NoTNight), conf.int=T)
-cbind(exp(modelRandom25NoTNight$estimate),
-exp(modelRandom25NoTNight$`2.5 %`),
-exp(modelRandom25NoTNight$`97.5 %`))
+cbind(exp(modelRandom25NoTNight$estimate[2:4]),exp(modelRandom25NoTNight$`2.5 %`[2:4]),exp(modelRandom25NoTNight$`97.5 %`[2:4]))
 
-## ssmartphone use before sleep and BMI > 25 in population sample
+## smartphone use before sleep and BMI > 25 in population sample
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTBefore <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTBefore <- summary(pool(Random25NoTBefore), conf.int=T)
-cbind(exp(modelRandom25NoTBefore$estimate),
-      exp(modelRandom25NoTBEfore$`2.5 %`),
-      exp(modelRandom25NoTBefore$`97.5 %`))
+cbind(exp(modelRandom25NoTBefore$estimate[2:5]),exp(modelRandom25NoTBefore$`2.5 %`[2:5]),exp(modelRandom25NoTBefore$`97.5 %`[2:5]))
 
 #test for trend:
 ## smartphone use during the sleep period and BMI > 25
@@ -891,6 +889,7 @@ MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_tr
 # Four clusters
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
+
 m <- glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random30No)$pooled$estimate
 predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
