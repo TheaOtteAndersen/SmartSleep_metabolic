@@ -834,6 +834,7 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 # Six clusters
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpSix <- summary(pool(Random25No), conf.int = T)
+## Prediction
 m <- glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
 predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
@@ -842,10 +843,9 @@ MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_tr
 # Four clusters
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
-## 
+## Prediction
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
-
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
@@ -883,6 +883,7 @@ summary(pool(Random25NoTestBefore), conf.int=T)
 # Six clusters
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpSix <- summary(pool(Random30No), conf.int = T)
+## Prediction
 m <- glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random30No)$pooled$estimate
 predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
@@ -891,6 +892,7 @@ MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_tr
 # Four clusters
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
+## Prediction
 m <- glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random30No)$pooled$estimate
 predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
