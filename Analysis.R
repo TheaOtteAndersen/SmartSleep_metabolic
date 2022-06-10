@@ -140,7 +140,7 @@ table(pop_data$mobileUseNight)
 table(pop_data$mobileUseBeforeSleep)
 
 ## merge tracking and survey data for population sample
-pop_track <- inner_join(pop_data,subject_tracking_clusters,by="userid")
+pop_track <- left_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
 
 ## Tracking clusters som én numerisk variabel
@@ -159,7 +159,7 @@ pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 ## merge survey and clinical data
 clinical_sample <- rename(inner_join(clin_data,rename(clin_clinical,PNR=cpr),by="PNR"),bmi.self=bmi.x , bmi.clinical=bmi.y)
 ## merge with tracking data
-clinical_sample <- inner_join(clinical_sample,subject_tracking_clusters,by="userid")
+clinical_sample <- left_join(clinical_sample,subject_tracking_clusters,by="userid")
 
 
 
