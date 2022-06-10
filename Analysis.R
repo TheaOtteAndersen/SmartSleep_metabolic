@@ -117,6 +117,7 @@ mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
 bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
 bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 
+## constructing some change variables (not used in current analyses)
 bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
 bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
@@ -125,6 +126,7 @@ bmi_followup$bmi30change <- as.numeric((bmi_followup$bmi.fu>=30)!=(bmi_followup$
 bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.fu>=30)>(bmi_followup$bmi.base>=30))
 bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_followup$bmi.base>=30))
 
+## naming sample_weights and constructing followup_time
 bmi_followup$sample_weights <- bmi_followup$sample_weights.y
 bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
 
@@ -241,21 +243,8 @@ for (i in 1:N_imp){
 }
 
 pool_inf_baseNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-#pool_inf_baseNight$qbar
-#pool_inf_baseNight$ubar
-#pool_inf_baseNight$ba
-#pool_inf_baseNight$pval
 
-
-#Seems that we can get stable contrats of the mean (taking in varying medians), in spite of skewness.
-
-#One slightly hacky way to achieve this may be to take one of the fitted models created by fit() and replace the stored coefficients with the final pooled estimates. I haven't done detailed testing but it seems to be working on this simple example:
-m$mu.coefficients <- pool_inf_baseNight$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
-
-
-#Confidence intervals:
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
 lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,5],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,1],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[2,6],sigma=exp(pool_inf_baseNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
@@ -289,20 +278,8 @@ for (i in 1:N_imp){
 }
 
 pool_inf_baseBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-#pool_inf_baseBefore$qbar
-#pool_inf_baseBefore$ubar
-#pool_inf_baseBefore$ba
-#pool_inf_baseBefore$pval
 
-
-#Seems that we can get stable contrats of the mean (taking in varying medians), in spite of skewness.
-
-#One slightly hacky way to achieve this may be to take one of the fitted models created by fit() and replace the stored coefficients with the final pooled estimates. I haven't done detailed testing but it seems to be working on this simple example:
-m$mu.coefficients <- pool_inf_baseBefore$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
-
-#Confidence intervals:
+#Confidence intervals: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
 lowerCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,5],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 estCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,1],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
 upperCat2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseBefore)[2,6],sigma=exp(pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
@@ -326,7 +303,7 @@ confints_base_Before <- cbind(c(lowerCat2,lowerCat3,lowerCat4,lowerCat5),c(estCa
 ## test for trend (night-time smartphone use and BMI continuous) in baseline Citizen Science sample (table 2 in paper)
 # --------------------------------------------------------------------------- ##
 #Because the skewness is constant in covariates, the shift between median and mean is constant in covariates.
-#We can thus simply make a test for trend on the median to get a p value, as median equality <=> mean equality.
+#We can simply make a test for trend on the median to get a p value for trend on the mean, as median equality <=> mean equality (by (v) in Ferrari and Fumes).
 
 # Smartphone use during sleep period and BMI continuous:
 
@@ -345,12 +322,6 @@ for (i in 1:N_imp){
 }
 
 pool_inf_baseTrendNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-
-#Going to means:
-
-m$mu.coefficients <- pool_inf_baseTrendNight$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
 #interval
 lowerCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendNight)[2,5],sigma=exp(pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendNight$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
@@ -377,12 +348,6 @@ for (i in 1:N_imp){
 }
 
 pool_inf_baseTrendBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
-
-#Going to means:
-
-m$mu.coefficients <- pool_inf_baseTrendBefore$qbar[1:length(m$mu.coefficients)]
-m$sigma.coefficients <- pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))]
-m$nu.coefficients <- pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))]
 
 #interval
 lowerCatTrendBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseTrendBefore)[2,5],sigma=exp(pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+1)]),nu=pool_inf_baseTrendBefore$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1)]),0,Inf)$value 
@@ -469,34 +434,25 @@ cbind(exp(model25Before$estimate),
 model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25 <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 
-## estimater for mobileUseBeforeSleep:followUpTime??
+## estimater for mobileUseBeforeSleep:followUpTime
 exp(cbind(model_summary25$estimate[19:22],model_summary25$`2.5 %`[19:22],model_summary25$`97.5 %`[19:22]))
 
 ## smartphone use during the seep period
 model25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25Night <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
-
+## estimater for mobileUseNight:followUpTime
 exp(cbind(model_summary25Night$estimate[19:21],model_summary25Night$`2.5 %`[19:21],model_summary25Night$`97.5 %`[19:21]))
 
 ## test for trend (smartphone use before sleep)
 test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25 <- summary(pool(test25), conf.int = T)
-#anova(test25,model25)
-
-## smartphone use during the sleep period
-#model25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-#model_summary25<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
-#exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
 
 ## test for trend (smartphone use during the sleep period)
-
-#test25 <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y))+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial)
-#testT25 <- summary(pool(test25), conf.int = T)
 
 test25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25Night <- summary(pool(test25Night), conf.int = T)
 
-#anova(test25,model25)
+
 # --------------------------------------------------------------------------- ##
 
 ## from below 30 to above 30
@@ -509,7 +465,6 @@ exp(cbind(model_summary30$estimate[19:22],model_summary30$`2.5 %`[19:22],model_s
 ## test for trend
 test30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 testT30 <- summary(pool(test30), conf.int=T)
-#anova(test30,model30)
 
 ## smartphone use during the sleep period
 model30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
@@ -531,7 +486,6 @@ plot(fitted(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+ge
 hist(residuals(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
 
 ## smartphone use during sleep period and changes in BMI:
-#m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
 m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
 model_summary_diff_Night <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
@@ -543,36 +497,14 @@ test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
-## smartphone use Before Sleep and changes in BMI (OBS: gentagelse fra ovenstående??!?)
-
-## from below 25 to above 25
-#model25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-#model_summary25Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
-#exp(cbind(model_summary25$estimate[1:4],model_summary25$`2.5 %`[1:4],model_summary25$`97.5 %`[1:4]))
-
-
-## test for trend
-#test25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-#testT25Before <- summary(pool(test25Before), conf.int = T)
-#anova(test25,model25)
-
-## from below 30 to above 30
-#model30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-#model_summary30Before<-summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-#exp(cbind(model_summary30$estimate[1:4],model_summary30$`2.5 %`[1:4],model_summary30$`97.5 %`[1:4]))
-# test for trend
-#test30Before <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseBeforeSleep.y)+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-#testT30Before <- summary(pool(test30Before), conf.int = T)
-#anova(test30,model30)
-
 ## smartphone use before sleep onset and bmi continous
 
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
 
-plot(fitted(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
-     residuals(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
-hist(residuals(lm(difference~(mobileUseBeforeSleep.y+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
+plot(fitted(lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
+     residuals(lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
+hist(residuals(lm(bmi.fu~((mobileUseBeforeSleep.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),breaks=50)
 
 
 #m <- lm(difference~(selfScoreCat.y+age.y+gender.y+education.y+occupation.y)*followup_time-selfScoreCat.y-age.y-gender.y-education.y-occupation.y,weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","selfScoreCat.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights")]))
@@ -626,6 +558,7 @@ for (i in 1:N_imp){ #Slow
 
 pool_inf_PopTrackNoTNight <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
 
 lowerNight2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estNight2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNight)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNight$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -659,6 +592,8 @@ for (i in 1:N_imp){
 
 pool_inf_PopTrackNoTNightTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
+
 lowerCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estCatNight <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperCatNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTNightTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTNightTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -683,6 +618,7 @@ for (i in 1:N_imp){ #Slow
 
 pool_inf_PopTrackNoTBefore <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
 
 lowerBS2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estBS2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBefore)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -720,6 +656,8 @@ for (i in 1:N_imp){
 
 pool_inf_PopTrackNoTBeforeTrend <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
+
 lowerCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,5]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estCatBS <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,1]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperCatBS <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoTBeforeTrend)[2,6]+10,sigma=exp(pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBeforeTrend$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -741,6 +679,8 @@ for (i in 1:N_imp){
   vcovs[[i]] <- vcov(m)
 }
 pool_inf_PopTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
+
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
 
 lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -765,16 +705,18 @@ upperClust6 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS
 confints_PopTrackNoS_mpSix <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerClust5,lowerClust6),
                               c(estClust2,estClust3,estClust4,estClust5,estClust6),
                               c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-## prediction
+## prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 
 m <- gamlss(bmi~(cluster+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-
+# Erstatter estimerede værdier:
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
-
+# Laver prædiktion:
 predbmipop_sixmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")])
-
+# Finder MSE: 
 MSEbmipopsixmax <- mean((predbmipop_sixmax - pop_track$bmi[pop_track$imputation!=0])^2)
 
 
@@ -794,6 +736,8 @@ for (i in 1:N_imp){
 
 pool_inf_PopTrackNoS_mp <- miceadds::pool_mi(qhat = coefs, u = vcovs)
 
+#Confidence intervals for means: Calculated by integration over the model density. By (v) in Ferrari & Fumes we can get mean contrasts by integrating with the median contrasts.
+
 lowerClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,5]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 estClust2 <-  integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,1]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 upperClust2 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS_mp)[2,6]+10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
@@ -809,16 +753,18 @@ upperClust4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_PopTrackNoS
 confints_PopTrackNoS_mpFour <- cbind(c(lowerClust2,lowerClust3,lowerClust4),
                               c(estClust2,estClust3,estClust4),
                               c(upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
-## prediction
+## prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 
 m <- gamlss(bmi~(cluster.y+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-
+# Erstatter estimerede værdier:
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
-
+# Laver prædiktion:
 predbmipop_fourmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")])
-
+# Finder MSE: 
 MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputation!=0])^2)
 
 
@@ -835,20 +781,30 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpSix <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpSix$estimate[2:4],modelRandom25No_mpSix$`2.5 %`[2:4],modelRandom25No_mpSix$`97.5 %`[2:4]))
-## Prediction
+## Prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 m <- glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+# Erstatter estimerede værdier:
 m$coefficients <- pool(Random25No)$pooled$estimate
+# Laver prædiktion:
 predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+# Finder MSE: 
 MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
 # Four clusters
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpFour$estimate[2:4],modelRandom25No_mpFour$`2.5 %`[2:4],modelRandom25No_mpFour$`97.5 %`[2:4]))
-## Prediction
+## Prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+# Erstatter estimerede værdier:
 m$coefficients <- pool(Random25No)$pooled$estimate
+# Laver prædiktion:
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+# Finder MSE: 
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
 
@@ -882,20 +838,30 @@ summary(pool(Random25NoTestBefore), conf.int=T)
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpSix <- summary(pool(Random30No), conf.int = T)
 exp(cbind(modelRandom30No_mpSix$estimate[2:4],modelRandom30No_mpSix$`2.5 %`[2:4],modelRandom30No_mpSix$`97.5 %`[2:4]))
-## Prediction
+## Prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 m <- glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+# Erstatter estimerede værdier:
 m$coefficients <- pool(Random30No)$pooled$estimate
+# Laver prædiktion:
 predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+# Finder MSE: 
 MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 # Four clusters
 Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
 exp(cbind(modelRandom30No_mpFour$estimate[2:4],modelRandom30No_mpFour$`2.5 %`[2:4],modelRandom30No_mpFour$`97.5 %`[2:4]))
-## Prediction
+## Prediction:
+## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger så objektet m til at lave prædiktion.
 m <- glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
+# Erstatter estimerede værdier:
 m$coefficients <- pool(Random30No)$pooled$estimate
+# Laver prædiktion:
 predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
+# Finder MSE: 
 MSEpopbin30_predmaxfour <- mean((expit(predpopbin30_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
 
 
@@ -1122,37 +1088,19 @@ names(df_ints_mpFour) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp"
 
 ## night-time smartphone use 
 
-predict.person <- data.frame("age"=18,education="",occupation="Employed")
+## Analyses: mobileUseNight and biomarkers
 
-## mobileUseBeforeSleep and biomarkers
-
-dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-
-## Smartphone use during the sleep period and biomarkers
-
-predict.person <- data.frame("age"=18,education="",occupation="Employed")
-
-dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
 
 
 df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNight[2,],t_chol_intsNight[2,],tri_intsNight[2,],hba1c_intsNight[2,],dbp_intsNight[2,],sbp_intsNight[2,],wh_intsNight[2,],glu_intsNight[2,],bmi_intsNight[2,]),
@@ -1163,41 +1111,20 @@ colnames(df_intsNight) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.
 rownames(df_intsNight) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
 df_intsNight
 
-## mobileUseNight and biomarkers
-dbp_intS <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intS <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intS <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
 
-df_intsS <- data.frame(rbind(hdl_intS[2,],ldl_intS[2,],vldl_intS[2,],t_chol_intS[2,],tri_intS[2,],hba1c_intS[2,],dbp_intS[2,],sbp_intS[2,],wh_intS[2,],glu_intS[2,],bmi_intS[2,]),
-                       rbind(hdl_intS[3,],ldl_intS[3,],vldl_intS[3,],t_chol_intS[3,],tri_intS[3,],hba1c_intS[3,],dbp_intS[3,],sbp_intS[3,],wh_intS[3,],glu_intS[3,],bmi_intS[3,]),
-                       rbind(hdl_intS[4,],ldl_intS[4,],vldl_intS[4,],t_chol_intS[4,],tri_intS[4,],hba1c_intS[4,],dbp_intS[4,],sbp_intS[4,],wh_intS[4,],glu_intS[4,],bmi_intS[4,]))
+## Analyses: Smartphone use Before sleep and biomarkers 
 
-colnames(df_intsS) <- c("cat.2.estimate","cat.2.lower","cat.2.upper","cat.2.pvalue","cat.3.estimate","cat.3.lower","cat.3.upper","cat.3.pvalue","cat.4.estimate","cat.4.lower","cat.4.upper","cat.4.pvalue")
-rownames(df_intsS) <- c("hdl","ldl","vldl","total cholesterol","triglycerids","hba1c","dbp","sbp","waist-hip-ratio","glucose","bmi")
-df_intsS
-
-
-## Smartphone use Before sleep and biomarkers
-
-dbp_intsBefore <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(dbp_sum[,1]-1.96*dbp_sum[,2],dbp_sum[,1]+1.96*dbp_sum[,2])
-glu_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(glu_sum[,1]-1.96*glu_sum[,2],glu_sum[,1]+1.96*glu_sum[,2])
-hba1c_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hba1c_sum[,1]-1.96*hba1c_sum[,2],hba1c_sum[,1]+1.96*hba1c_sum[,2])
-hdl_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(hdl_sum[,1]-1.96*hdl_sum[,2],hdl_sum[,1]+1.96*hdl_sum[,2])
-ldl_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(ldl_sum[,1]-1.96*ldl_sum[,2],ldl_sum[,1]+1.96*ldl_sum[,2])
-t_chol_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(t_cholesterol_sum[,1]-1.96*t_cholesterol_sum[,2],t_cholesterol_sum[,1]+1.96*t_cholesterol_sum[,2])
-sbp_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(sbp_sum[,1]-1.96*sbp_sum[,2],sbp_sum[,1]+1.96*sbp_sum[,2])
-tri_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(tri_sum[,1]-1.96*tri_sum[,2],tri_sum[,1]+1.96*tri_sum[,2])
-vldl_intsBefore <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(vldl_sum[,1]-1.96*vldl_sum[,2],vldl_sum[,1]+1.96*vldl_sum[,2])
-wh_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
-bmi_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(wh_sum[,1]-1.96*wh_sum[,2],wh_sum[,1]+1.96*wh_sum[,2])
+dbp_intsBefore <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+glu_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hba1c_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hdl_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+ldl_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+t_chol_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+sbp_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+tri_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+vldl_intsBefore <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+wh_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+bmi_intsBefore <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseBeforeSleep+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
 
 df_intsBefore <- data.frame(rbind(hdl_intsBefore[2,],ldl_intsBefore[2,],vldl_intsBefore[2,],t_chol_intsBefore[2,],tri_intsBefore[2,],hba1c_intsBefore[2,],dbp_intsBefore[2,],sbp_intsBefore[2,],wh_intsBefore[2,],glu_intsBefore[2,],bmi_intsBefore[2,]),
                                 rbind(hdl_intsBefore[3,],ldl_intsBefore[3,],vldl_intsBefore[3,],t_chol_intsBefore[3,],tri_intsBefore[3,],hba1c_intsBefore[3,],dbp_intsBefore[3,],sbp_intsBefore[3,],wh_intsBefore[3,],glu_intsBefore[3,],bmi_intsBefore[3,]),
