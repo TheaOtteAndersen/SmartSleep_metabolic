@@ -146,6 +146,9 @@ pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track
 
 #save(pop_track,file="H:/SmartSleep backup IT Issues/gamlssBootstrap/pop_track.RData")
 
+table(pop_track$description.y, pop_track$cluster.y )
+pop_track$cluster.y <- factor(pop_track$cluster.y,levels = c("Cluster 3", "Cluster 2", "Cluster 4", "Cluster 1"))
+
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
 ## Clinical Data
@@ -664,7 +667,7 @@ confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNigh
 confints_PopTrackNoTTrendNight <- cbind(confints_PopTrackNoTTrendNight,summary(pool_inf_PopTrackNoTNightTrend)[2,4])
 
 
-#
+# smartphone use before sleep onset and BMI continous in population sample
 
 coefs <- list()
 ses <- list()
@@ -823,6 +826,7 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 ### Binary Outcomes for population sample
 # --------------------------------------------------------------------------- ##
 
+
 ## BMI > 25
 
 ## Maximal posterior probability assignment
@@ -838,8 +842,10 @@ MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_tr
 # Four clusters
 Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
+## 
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
 m$coefficients <- pool(Random25No)$pooled$estimate
+
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
