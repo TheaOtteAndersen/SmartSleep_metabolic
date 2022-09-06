@@ -235,6 +235,7 @@ publish(univariateTable(mobileUseNight ~ bmiCat,data=base_data, column.percent=T
 
 # --------------------------------------------------------------------------- ##
 
+
 ## Population Sample
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample")
 popu <- read.table("imp_population.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
@@ -243,7 +244,7 @@ table(popu$imputation, useNA = "always")
 popu <- subset(popu,imputation!=0)
 
 ## load tracking data subjects
-setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data")
+#setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data")
 #tracking <- read.table("subject_tracking_clusters.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
 #tracking_popu <- subset(subject_tracking_clusters, random==1)
 
@@ -257,10 +258,11 @@ publish(univariateTable( ~ agePNR,data=popu, column.percent=TRUE))
 ## SD for pooled mean age
 sqrt( mean(aggregate(subset(popu,imputation!=0)$agePNR,by=list(subset(popu,imputation!=0)$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0)$agePNR,by=list(subset(popu,imputation!=0)$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0)$agePNR))^2)/19
 )
+names(popu)
 
-## gender
-table(popu$Gender, useNA="always")/25
-prop.table(table(popu$Gender))
+## sex
+table(popu$sex, useNA="always")/25
+prop.table(table(popu$sex))
 
 ## education
 table(popu$education, useNA="always")/25
@@ -270,16 +272,6 @@ prop.table(table(popu$education))
 table(popu$occupation, useNA="always")/25
 prop.table(table(popu$occupation))
 
-## bmi
-table(popu$bmi)
-popu$bmi<- gsub(",", ".", popu$bmi)
-popu$bmi <- as.numeric(popu$bmi)
-
-popu$bmiCat[popu$bmi<25] <- "<25"
-popu$bmiCat[popu$bmi>=25 & popu$bmi<30] <- "25-30"
-popu$bmiCat[popu$bmi>=30] <- ">=30"
-table(popu$bmiCat, useNA="always")/25
-prop.table(table(popu$bmiCat, useNA="always")/25)
 
 ## self-reported smartphone use before sleep onset
 table(popu$mobileUseBeforeSleep, useNA="always")/25
@@ -288,6 +280,114 @@ publish(univariateTable( ~ mobileUseBeforeSleep,data=popu, column.percent=TRUE))
 ## night-time smartphone use
 table(popu$mobileUseNight, useNA="always")/25
 publish(univariateTable( ~ mobileUseNight,data=popu, column.percent=TRUE))
+
+##---------------------------------------------------------------------------##
+## confounders according to night-time smartphone use
+
+## age
+publish(univariateTable(mobileUseNight ~ agePNR,data=popu, column.percent=TRUE))
+
+## SD for mobileUseNight=Never
+sqrt( 
+  mean(aggregate(subset(popu,imputation!=0 & mobileUseNight=="Never")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="Never")$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0 & mobileUseNight=="Never")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="Never")$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0 & mobileUseNight=="Never")$agePNR))^2)/25
+)
+
+## SD formobileUseNight=A few times a month or less
+sqrt( 
+  mean(aggregate(subset(popu,imputation!=0 & mobileUseNight=="A few times a month or less")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="A few times a month or less")$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0 & mobileUseNight=="A few times a month or less")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="A few times a month or less")$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0 & mobileUseNight=="A few times a month or less")$agePNR))^2)/25
+)
+
+## SD for mobileUseNight=A few times a week
+sqrt( 
+  mean(aggregate(subset(popu,imputation!=0 & mobileUseNight=="A few times a week")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="A few times a week")$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0 & mobileUseNight=="A few times a week")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="A few times a week")$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0 & mobileUseNight=="A few times a week")$agePNR))^2)/25
+)
+
+## SD for mobileUseNight=Every night or almost every night
+sqrt( 
+  mean(aggregate(subset(popu,imputation!=0 & mobileUseNight=="Every night or almost every night")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="Every night or almost every night")$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0 & mobileUseNight=="Every night or almost every night")$agePNR,by=list(subset(popu,imputation!=0 & mobileUseNight=="Every night or almost every night")$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0 & mobileUseNight=="Every night or almost every night")$agePNR))^2)/25
+)
+
+## sex
+publish(univariateTable(mobileUseNight ~ sex,data=popu, column.percent=TRUE))
+table(popu$mobileUseNight, popu$sex)/25
+
+## education
+table(popu$mobileUseNight, popu$education)/25
+publish(univariateTable(mobileUseNight ~ education,data=popu, column.percent=TRUE))
+
+## occupation
+table(popu$mobileUseNight, popu$occupation)/25
+publish(univariateTable(mobileUseNight ~ occupation,data=popu, column.percent=TRUE))
+
+# --------------------------------------------------------------------------- ##
+## clinical sample
+
+setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample")
+clinical <- read.table("imp_clinical.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
+
+## imputation
+table(clinical$imputation, useNA = "always")
+clinical <- subset(clinical,imputation!=0)
+
+names(clinical)
+## distribution in only survey data
+## age distribution
+publish(univariateTable( ~ age,data=clinical, column.percent=TRUE))
+
+## SD for pooled mean age
+sqrt( mean(aggregate(subset(clinical,imputation!=0)$age,by=list(subset(clinical,imputation!=0)$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0)$age,by=list(subset(clinical,imputation!=0)$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0)$age))^2)/19
+)
+names(clinical)
+
+## education
+table(clinical$education, useNA="always")/25
+prop.table(table(clinical$education))
+
+## occupation
+table(clinical$occupation, useNA="always")/25
+prop.table(table(clinical$occupation))
+
+## night-time smartphone use
+table(clinical$mobileUseNight, useNA="always")/25
+publish(univariateTable( ~ mobileUseNight,data=clinical, column.percent=TRUE))
+
+##----------------------------------------------------------------------------##
+## confounders according to night-time smartphone use
+## age
+publish(univariateTable(mobileUseNight ~ age,data=clinical, column.percent=TRUE))
+
+## SD for mobileUseNight=Never
+sqrt( 
+  mean(aggregate(subset(clinical,imputation!=0 & mobileUseNight=="Never")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="Never")$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0 & mobileUseNight=="Never")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="Never")$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0 & mobileUseNight=="Never")$age))^2)/25
+)
+
+## SD formobileUseNight=A few times a month or less
+sqrt( 
+  mean(aggregate(subset(clinical,imputation!=0 & mobileUseNight=="A few times a month or less")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="A few times a month or less")$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0 & mobileUseNight=="A few times a month or less")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="A few times a month or less")$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0 & mobileUseNight=="A few times a month or less")$age))^2)/25
+)
+
+## SD for mobileUseNight=A few times a week
+sqrt( 
+  mean(aggregate(subset(clinical,imputation!=0 & mobileUseNight=="A few times a week")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="A few times a week")$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0 & mobileUseNight=="A few times a week")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="A few times a week")$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0 & mobileUseNight=="A few times a week")$age))^2)/25
+)
+
+## SD for mobileUseNight=Every night or almost every night
+sqrt( 
+  mean(aggregate(subset(clinical,imputation!=0 & mobileUseNight=="Every night or almost every night")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="Every night or almost every night")$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0 & mobileUseNight=="Every night or almost every night")$age,by=list(subset(clinical,imputation!=0 & mobileUseNight=="Every night or almost every night")$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0 & mobileUseNight=="Every night or almost every night")$age))^2)/25
+)
+
+## education
+table(clinical$mobileUseNight, clinical$education)/25
+publish(univariateTable(mobileUseNight ~ education,data=clinical, column.percent=TRUE))
+
+## occupation
+table(clinical$mobileUseNight, clinical$occupation)/25
+publish(univariateTable(mobileUseNight ~ occupation,data=clinical, column.percent=TRUE))
+
+
+
+
+
 
 # --------------------------------------------------------------------------- ##
   
