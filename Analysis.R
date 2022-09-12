@@ -37,7 +37,7 @@ estimate.pooler <- function(coef,sd){
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
 
 ## load tracking data 
-subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv")
+#subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv") ## forkert navn på csv-fil?
 subject_tracking_four_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_four_clusters.csv")
 
 ## Collecting the two clusterings in one file
@@ -49,17 +49,17 @@ subject_tracking_clusters <- rename(subject_tracking_clusters,cluster1prob=clust
 ## load baseline data
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
 base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+#base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load followup sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 CSS$mobileUseNight <- factor(CSS$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-CSS$mobileUseBeforeSleep <- factor(CSS$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+#CSS$mobileUseBeforeSleep <- factor(CSS$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load population sample
 pop_data <-read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv")
 pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-pop_data$mobileUseBeforeSleep <- factor(pop_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+#pop_data$mobileUseBeforeSleep <- factor(pop_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 ## load clinical data (survey and clinical data)
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
@@ -71,7 +71,7 @@ unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
 
 clin_data$mobileUseNight <- factor(clin_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+#clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
 
 
 # --------------------------------------------------------------------------- ##
@@ -81,9 +81,9 @@ clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels 
 ## if no mobile phone = NA
 base_data$pmpuScale[base_data$mobilephone=="No mobile phone"] <- NA
 
-## tjek risk profiles
-publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
-base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
+## night-time smartphone use
+#publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
+#base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
 
 ## bmi
@@ -96,7 +96,7 @@ base_data_mids <- as.mids(base_data,.imp="imputation")
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
 
-table(CSS$mobileUseBeforeSleep, useNA="always")
+#table(CSS$mobileUseBeforeSleep, useNA="always")
 table(CSS$mobileUseNight, useNA="always")
 
 ## merge survey and tracking data 
@@ -117,6 +117,15 @@ bmi_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),bmi.
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
 mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
 
+## difference in bmi according to sex
+bmi_followupMen <- subset(bmi_followup, sex.x=="Man")
+bmi_followupWomen <- subset(bmi_followup, sex.x=="Woman")
+table(bmi_followupWomen$sex.x)
+
+mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
+mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
+
+## bmi 25 or bmi 30
 bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
 bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
 
@@ -140,7 +149,6 @@ bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 
 ##
 table(pop_data$mobileUseNight)
-table(pop_data$mobileUseBeforeSleep)
 
 ## merge tracking and survey data for population sample
 pop_track <- left_join(pop_data,subject_tracking_clusters,by="userid")
@@ -263,7 +271,7 @@ upperCat4 <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_baseNight)[4,
 confints_base_Night <- cbind(c(lowerCat2,lowerCat3,lowerCat4),c(estCat2,estCat3,estCat4),c(upperCat2,upperCat3,upperCat4))
 
 # --------------------------------------------------------------------------- ##
-# MobileUseBeforeSleep and BMI continous in the baseline Citizen Science Sample
+# MobileUseBeforeSleep and BMI continous in the baseline Citizen Science Sample ## slettes (08/09/2022)
 
 coefs <- list()
 ses <- list()
@@ -333,7 +341,7 @@ upperCatTrendNight <- integrate(function(y) y*dBCCG(x=y,mu=summary(pool_inf_base
 summary(pool_inf_baseTrendNight)$p[2]
 
 # --------------------------------------------------------------------------- ##
-## test for trend: Smartphone use Before sleep and BMI continous (table 2 in paper)
+## test for trend: Smartphone use Before sleep and BMI continous (table 2 in paper) ## slettes (08/09/2022)
 
 coefs <- list()
 ses <- list()
@@ -395,7 +403,7 @@ exp(model25Night$`2.5 %`),
 exp(model25Night$`97.5 %`))
 
 # --------------------------------------------------------------------------- ##
-# Smartphone use Before sleep and BMI (25 or 30)
+# Smartphone use Before sleep and BMI (25 or 30) ## slettes (08/09/2022)
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseBeforeSleep+age+gender+education+occupation), weights=sample_weights,family=binomial))
 
@@ -432,7 +440,7 @@ cbind(exp(model25Before$estimate),
 # --------------------------------------------------------------------------- ##
 ## from below 25 to above 25
 
-## smartphone use before sleep onset:
+## smartphone use before sleep onset: ## slettes (08/09/2022)
 model25Before <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 model_summary25Before <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
 
@@ -459,7 +467,7 @@ testT25Night <- summary(pool(test25Night), conf.int = T)
 
 ## from below 30 to above 30
 
-## smartphone use before sleep
+## smartphone use before sleep ## slettes (08/09/2022)
 model30 <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
 model_summary30 <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseBeforeSleep.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
 exp(cbind(model_summary30$estimate[19:22],model_summary30$`2.5 %`[19:22],model_summary30$`97.5 %`[19:22]))
@@ -499,7 +507,7 @@ test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
-## smartphone use before sleep onset and bmi continous
+## smartphone use before sleep onset and bmi continous (slettes (08/09/2022))
 
 ## Modelling numeric difference in bmi between baseline and followup
 hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
@@ -603,7 +611,7 @@ confints_PopTrackNoTTrendNight <- rbind(c(lowerCatNight,estCatNight,upperCatNigh
 confints_PopTrackNoTTrendNight <- cbind(confints_PopTrackNoTTrendNight,summary(pool_inf_PopTrackNoTNightTrend)[2,4])
 
 
-# smartphone use before sleep onset and BMI continous in population sample
+# smartphone use before sleep onset and BMI continous in population sample ## slettes (08/09/2022)
 
 coefs <- list()
 ses <- list()
@@ -642,7 +650,7 @@ confints_PopTrackNoTBefore <- cbind(c(lowerBS2,lowerBS3,lowerBS4,lowerBS5),
                                     c(estBS2,estBS3,estBS4,estBS5),
                                     c(upperBS2,upperBS3,upperBS4,upperBS5))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoTBefore$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 
-#Trend:
+#Trend: (slettes (08/09/2022))
 coefs <- list()
 ses <- list()
 vcovs <- list()
@@ -815,7 +823,7 @@ Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+
 modelRandom25NoTNight <- summary(pool(Random25NoTNight), conf.int=T)
 cbind(exp(modelRandom25NoTNight$estimate[2:4]),exp(modelRandom25NoTNight$`2.5 %`[2:4]),exp(modelRandom25NoTNight$`97.5 %`[2:4]))
 
-## smartphone use before sleep and BMI > 25 in population sample
+## smartphone use before sleep and BMI > 25 in population sample ## slettes (08/09/2022)
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTBefore <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom25NoTBefore <- summary(pool(Random25NoTBefore), conf.int=T)
@@ -826,7 +834,7 @@ cbind(exp(modelRandom25NoTBefore$estimate[2:5]),exp(modelRandom25NoTBefore$`2.5 
 Random25NoTestNight <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestNight), conf.int=T)
 
-## smartphone use before sleep onset and BMI > 25
+## smartphone use before sleep onset and BMI > 25 ## slettes (08/09/2022)
 Random25NoTestBefore <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseBeforeSleep)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestBefore), conf.int=T)
 
@@ -875,7 +883,7 @@ cbind(exp(modelRandom30NoTNight$estimate),
       exp(modelRandom30NoTNight$`2.5 %`),
       exp(modelRandom30NoTNight$`97.5 %`))[2:4,]
 
-## smartphone use before sleep onset and BMI >30
+## smartphone use before sleep onset and BMI >30 ## slettes (08/09/2022)
 summary(pool(with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random30NoTBefore <- with(pop_track_mids,glm((bmi>=30) ~ (mobileUseBeforeSleep+age+sex+education+occupation), weights=sample_weights,family=binomial))
 modelRandom30NoTBefore <- summary(pool(Random30NoTBefore), conf.int=T)
