@@ -329,7 +329,7 @@ clinical <- read.table("imp_clinical.csv", header=TRUE, fill=TRUE, sep=";", stri
 table(clinical$imputation, useNA = "always")
 clinical <- subset(clinical,imputation!=0)
 
-names(clinical)
+#names(clinical)
 ## distribution in only survey data
 ## age distribution
 publish(univariateTable( ~ age,data=clinical, column.percent=TRUE))
@@ -337,15 +337,37 @@ publish(univariateTable( ~ age,data=clinical, column.percent=TRUE))
 ## SD for pooled mean age
 sqrt( mean(aggregate(subset(clinical,imputation!=0)$age,by=list(subset(clinical,imputation!=0)$imputation),FUN=var)$x)+sum((aggregate(subset(clinical,imputation!=0)$age,by=list(subset(clinical,imputation!=0)$imputation),FUN=mean)$x-mean(subset(clinical,imputation!=0)$age))^2)/19
 )
-names(clinical)
 
 ## education
 table(clinical$education, useNA="always")/25
 prop.table(table(clinical$education))
 
+#recategorise education
+table(clinical$education, useNA="always")
+clinical$educationCat[clinical$education=="long cycle higher education"] <- "High"
+clinical$educationCat[clinical$education=="medium cycle higher education"] <- "High"
+clinical$educationCat[clinical$education=="short cycle higher education"] <- "High"
+clinical$educationCat[clinical$education=="Technical vocational education"] <- "Low"
+clinical$educationCat[clinical$education=="Upper secondary education"] <- "Low"
+clinical$educationCat[clinical$education=="Other"] <- "Low"
+clinical$educationCat[clinical$education=="Primary school"] <- "Low"
+table(clinical$educationCat, useNA="always")/25
+prop.table(table(clinical$educationCat, useNA="always"))
+
 ## occupation
 table(clinical$occupation, useNA="always")/25
 prop.table(table(clinical$occupation))
+
+## recategorize occupation
+clinical$occupationCat[clinical$occupation=="unemployed"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="longterm sick leave"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="Other"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="employed"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="outside labor market"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="student"] <- "student"
+table(clinical$occupationCat, useNA="always")/25
+prop.table(table(clinical$occupationCat, useNA="always"))
+
 
 ## night-time smartphone use
 table(clinical$mobileUseNight, useNA="always")/25
@@ -380,10 +402,18 @@ sqrt(
 table(clinical$mobileUseNight, clinical$education)/25
 publish(univariateTable(mobileUseNight ~ education,data=clinical, column.percent=TRUE))
 
+# recategorized education
+table(clinical$mobileUseNight, clinical$educationCat)/25
+publish(univariateTable(mobileUseNight ~ educationCat,data=clinical, column.percent=TRUE))
+
+
 ## occupation
 table(clinical$mobileUseNight, clinical$occupation)/25
 publish(univariateTable(mobileUseNight ~ occupation,data=clinical, column.percent=TRUE))
 
+# recategorized occupation
+table(clinical$mobileUseNight, clinical$occupationCat)/25
+publish(univariateTable(mobileUseNight ~ occupationCat,data=clinical, column.percent=TRUE))
 
 
 
