@@ -43,9 +43,6 @@ estimate.pooler.unitary <- function(coef,sd){
 }
 
 ## self-reported night-time smartphone use and smartphone use before sleep onset
-publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
-base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
-
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
 base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never", "A few times a month or less", "A few times a week", "Every night or almost every night"))
 
@@ -456,10 +453,6 @@ prop.table(table(CSS$education))
 table(CSS$occupation, useNA="always")/25
 prop.table(table(CSS$occupation))
 
-
-## self-reported smartphone use before sleep onset
-table(CSS$mobileUseBeforeSleep, useNA="always")/25
-publish(univariateTable( ~ mobileUseBeforeSleep,data=CSS, column.percent=TRUE))
 
 ## night-time smartphone use
 table(CSS$mobileUseNight, useNA="always")/25
