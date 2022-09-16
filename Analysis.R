@@ -53,17 +53,17 @@ subject_tracking_clusters <- rename(subject_tracking_clusters,cluster1prob=clust
 ## load baseline data
 base_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Experiment/imp_Experiment.csv")
 base_data$mobileUseNight <- factor(base_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-#base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+
 
 ## load followup sample
 CSS <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Citizen Science Sample/imp_citizenScience.csv")
 CSS$mobileUseNight <- factor(CSS$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-#CSS$mobileUseBeforeSleep <- factor(CSS$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+
 
 ## load population sample
 pop_data <-read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample/imp_population.csv")
 pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-#pop_data$mobileUseBeforeSleep <- factor(pop_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+
 
 ## load clinical data (survey and clinical data)
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
@@ -75,7 +75,7 @@ unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
 
 clin_data$mobileUseNight <- factor(clin_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
-#clin_data$mobileUseBeforeSleep <- factor(clin_data$mobileUseBeforeSleep, levels = c("Never","Every month or less","Once a week","2-4 times per week","5-7 times per week"))
+
 
 
 # --------------------------------------------------------------------------- ##
@@ -370,7 +370,6 @@ exp(cbind(model_summary25Night$estimate[19:21],model_summary25Night$`2.5 %`[19:2
 test25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
 testT25Night <- summary(pool(test25Night), conf.int = T)
 
-
 # --------------------------------------------------------------------------- ##
 
 ## from below 30 to above 30
@@ -411,9 +410,9 @@ test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 #Profile likelihood intervals are better for models that are close to correct (mostly so for smaller sample sizes).
 
 
-# --------------------------------------------------------------------------- ##
+# -------------------------------------------------------------------------------------------------------------- ##
 ## cross-sectional analyses of self-reported and clusters of night-time smartphone use and BMI in population sample
-# --------------------------------------------------------------------------- ##
+# -------------------------------------------------------------------------------------------------------------- ##
 
 #Tracking data: Population sample (random sample) - analyses of numerical bmi and of indicators
 
@@ -594,7 +593,6 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 ### Binary Outcomes for population sample
 # --------------------------------------------------------------------------- ##
 
-
 ## BMI > 25
 
 ## Maximal posterior probability assignment
@@ -746,12 +744,22 @@ publish(univariateTable( ~ bmi.clinical,data=clinical_sample, column.percent=TRU
 
 # --------------------------------------------------------------------------- ##
 ## descriptive of clinical sample
+
+## imputation
+table(clinical_sample$imputation)
+
 ## age
 publish(univariateTable(mobileUseNight ~ age.x,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ age.x,data=clinical_sample, column.percent=TRUE))
 clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 
+## education
+publish(univariateTable(mobileUseNight ~ education,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ occupation,data=clinical_sample, column.percent=TRUE))
+
 ## BMI
+publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
+
+## night-time smartphone use
 publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 #The subjects are scoring in the high end. Is this an issue or a characteristic of the data?
@@ -774,25 +782,21 @@ clinical_sample$age<- as.numeric(str_c(substr(clinical_sample$age,1,1),substr(cl
 ## systolic blood pressure
 clinical_sample$sbp<-rowMeans(cbind(clinical_sample$sbp1,clinical_sample$sbp2,clinical_sample$sbp3),na.rm=T)
 publish(univariateTable(mobileUseNight ~ sbp,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ sbp,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ sbp,data=clinical_sample, column.percent=TRUE))
 
 # diastolic blood pressure
 clinical_sample$dbp<-rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$dbp3),na.rm=T)
 publish(univariateTable(mobileUseNight ~ dbp,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ dbp,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ dbp,data=clinical_sample, column.percent=TRUE))
 
 ## hip waist ratio
 clinical_sample$ratiowaisthip <- as.numeric(clinical_sample$ratiowaisthip)
 publish(univariateTable(mobileUseNight ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ ratiowaisthip,data=clinical_sample, column.percent=TRUE))
 
 ## bmi clinical
 clinical_sample$bmi.clinical <- as.numeric(clinical_sample$bmi.clinical)
 publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
 
@@ -817,37 +821,31 @@ hist(rowMeans(cbind(clinical_sample$dbp1,clinical_sample$dbp2,clinical_sample$db
 ## HDL
 clinical_sample$hdl <- as.numeric(clinical_sample$hdl)
 publish(univariateTable(mobileUseNight ~ hdl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ hdl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ hdl,data=clinical_sample, column.percent=TRUE))
 
 ## LDL
 clinical_sample$ldl <- as.numeric(clinical_sample$ldl)
 publish(univariateTable(mobileUseNight~ ldl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep~ ldl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y~ ldl,data=clinical_sample, column.percent=TRUE))
 
 ## VLDL
 clinical_sample$vldl <- as.numeric(clinical_sample$vldl)
 publish(univariateTable(mobileUseNight~ vldl,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep~ vldl,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y~ vldl,data=clinical_sample, column.percent=TRUE))
 
 ## total cholesterol
 clinical_sample$t_cholesterol <- as.numeric(clinical_sample$t_cholesterol)
 publish(univariateTable(mobileUseNight ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ t_cholesterol,data=clinical_sample, column.percent=TRUE))
 
 ## triglycerides
 clinical_sample$triglycerids <- as.numeric(clinical_sample$triglycerids)
 publish(univariateTable(mobileUseNight ~ triglycerids,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ triglycerids,data=clinical_sample, column.percent=TRUE))
 
 ## hba1c
 clinical_sample$hba1c <- as.numeric(clinical_sample$hba1c)
 publish(univariateTable(mobileUseNight ~ hba1c,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseBeforeSleep ~ hba1c,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(cluster.y ~ hba1c,data=clinical_sample, column.percent=TRUE))
 
 # --------------------------------------------------------------------------- ##
@@ -924,19 +922,19 @@ dt_ints_mpFour
 
 ## night-time smartphone use 
 
-## Analyses: mobileUseNight and biomarkers
+## Analyses: mobileUseNight and biomarkers (age = age.x??)
 
-dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
 
 
 df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNight[2,],t_chol_intsNight[2,],tri_intsNight[2,],hba1c_intsNight[2,],dbp_intsNight[2,],sbp_intsNight[2,],wh_intsNight[2,],glu_intsNight[2,],bmi_intsNight[2,]),
