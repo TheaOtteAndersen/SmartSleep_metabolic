@@ -356,11 +356,11 @@ table(clinical$occupation, useNA="always")/25
 prop.table(table(clinical$occupation))
 
 ## recategorize occupation
-clinical$occupationCat[clinical$occupation=="unemployed"] <- "Employed or other"
-clinical$occupationCat[clinical$occupation=="longterm sick leave"] <- "Employed or other"
-clinical$occupationCat[clinical$occupation=="Other"] <- "Employed or other"
-clinical$occupationCat[clinical$occupation=="employed"] <- "Employed or other"
-clinical$occupationCat[clinical$occupation=="outside labor market"] <- "Employed or other"
+clinical$occupationCat[clinical$occupation=="unemployed"] <- "Other"
+clinical$occupationCat[clinical$occupation=="longterm sick leave"] <- "Other"
+clinical$occupationCat[clinical$occupation=="Other"] <- "Other"
+clinical$occupationCat[clinical$occupation=="employed"] <- "Employed"
+clinical$occupationCat[clinical$occupation=="outside labor market"] <- "Other"
 clinical$occupationCat[clinical$occupation=="student"] <- "student"
 table(clinical$occupationCat, useNA="always")/25
 prop.table(table(clinical$occupationCat, useNA="always"))
