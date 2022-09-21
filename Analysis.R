@@ -37,7 +37,7 @@ estimate.pooler <- function(coef,sd){
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation")
 
 ## load tracking data 
-#subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv") ## forkert navn på csv-fil?
+#subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters.csv") ## forkert navn p? csv-fil?
 ## Er det den korrekt fil??
 subject_tracking_six_clusters <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Tracking data/subject_tracking_clusters_four_and_six.csv")
 
@@ -69,7 +69,7 @@ pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
 #clin_data <- full_imp_clinical
 clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
-clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
+clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/R?data/SmartSleepClinicalData.csv")
 ## Er dette det rigtige clinical data? Det er ikke alle fra clin_data der er i clin_clinical og omvendt?
 unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
@@ -89,7 +89,7 @@ publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
 ## weight
 publish(univariateTable( ~ weight,data=base_data, column.percent=TRUE))
 publish(univariateTable( ~ bmi,data=base_data, column.percent=TRUE))
-table(base_data$weight)
+table(base_data$height[base_data$imputation==0])
 
 ## bmi
 base_data$bmi30 <- (base_data$bmi>=30)
@@ -128,8 +128,11 @@ mean(weight_followup$difference[!is.na(weight_followup$difference)])
 
 table(weight_followup$difference)
 
-## store forskelle i vægt fra baseline til follow-up - tjek datasæt inden imputation!
+## store forskelle i v?gt fra baseline til follow-up - tjek datas?t inden imputation!
 weight <- subset(weight_followup, select=c(weight.fu, weight.base, difference))
+weight <- weight[weight_followup$imputation==0,]
+hist(weight_followup$difference, breaks=40)
+hist(weight_followup$difference[bmi_followup$imputation==0],breaks=40)
 
 ## difference in BMI mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
@@ -148,19 +151,6 @@ mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
 
 
 
-## bmi 25 or bmi 30
-bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
-bmi_followup$basebmi30=(bmi_followup$bmi.base>=30)
-
-## constructing some change variables (not used in current analyses)
-bmi_followup$bmi25change <- as.numeric((bmi_followup$bmi.fu>=25)!=(bmi_followup$bmi.base>=25))
-bmi_followup$bmi25changeUp <- as.numeric((bmi_followup$bmi.fu>=25)>(bmi_followup$bmi.base>=25))
-bmi_followup$bmi25changeDown <- as.numeric((bmi_followup$bmi.fu>=25)<(bmi_followup$bmi.base>=25))
-
-bmi_followup$bmi30change <- as.numeric((bmi_followup$bmi.fu>=30)!=(bmi_followup$bmi.base>=30))
-bmi_followup$bmi30changeUp <- as.numeric((bmi_followup$bmi.fu>=30)>(bmi_followup$bmi.base>=30))
-bmi_followup$bmi30changeDown <- as.numeric((bmi_followup$bmi.fu>=30)<(bmi_followup$bmi.base>=30))
-
 ## naming sample_weights and constructing followup_time
 bmi_followup$sample_weights <- bmi_followup$sample_weights.y
 bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
@@ -176,9 +166,6 @@ table(pop_data$mobileUseNight, useNA="always")
 ## merge tracking and survey data for population sample
 pop_track <- left_join(pop_data,subject_tracking_clusters,by="userid")
 pop_track$sample_weights<-as.numeric(pop_track$sample_weights)
-
-## Tracking clusters som én numerisk variabel
-#pop_track$track_severity <- (pop_track$cluster %in% c("Cluster 1"))*1+(pop_track$cluster %in% c("Cluster 2","Cluster 3"))*2+(pop_track$cluster %in% c("Cluster 5","Cluster 6"))*3+(pop_track$cluster %in% c("Cluster 4"))*4
 
 ## omkategoriser 4 clusters
 table(pop_track$description.y, pop_track$cluster.y)
@@ -329,7 +316,6 @@ summary(pool_inf_baseTrendNight)$p[2]
 
 
 # --------------------------------------------------------------------------- ##
-## hvad er dette? (12/09/2022)
 # Collected trend intervals
 confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNight,summary(pool_inf_baseTrendNight)$p[2]),
                            c(lowerCatTrendBS,estCatTrendBS,upperCatTrendBS,summary(pool_inf_baseTrendBefore)$p[2]))
@@ -374,36 +360,7 @@ exp(model25Night$`97.5 %`))
 #BMI followup difference - match with emailAddress or CS_ID
 #y: base, x: followup
 
-# night-time smartphone use and changes in BMI (25 or 30):
 
-# --------------------------------------------------------------------------- ##
-## from below 25 to above 25
-
-## smartphone use during the seep period
-model25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-model_summary25Night <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=25 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))), conf.int = T)
-## estimater for mobileUseNight:followUpTime
-exp(cbind(model_summary25Night$estimate[19:21],model_summary25Night$`2.5 %`[19:21],model_summary25Night$`97.5 %`[19:21]))
-
-
-## test for trend (smartphone use during the sleep period)
-test25Night <- with(bmi_followup_mids,glm(bmi.fu>=25 ~ (as.numeric(mobileUseNight.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=25), weights=sample_weights.y,family=binomial))
-testT25Night <- summary(pool(test25Night), conf.int = T)
-
-# --------------------------------------------------------------------------- ##
-
-## from below 30 to above 30
-
-## smartphone use during the sleep period
-model30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-model_summary30Night <- summary(pool(with(bmi_followup_mids,glm(bmi.fu>=30 ~ (mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))), conf.int = T)
-exp(cbind(model_summary30Night$estimate[19:21],model_summary30Night$`2.5 %`[19:21],model_summary30Night$`97.5 %`[19:21]))
-
-## test for trend
-test30Night <- with(bmi_followup_mids,glm(bmi.fu>=30 ~ (as.numeric(mobileUseNight.y):followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base)*(bmi.base>=30), weights=sample_weights.y,family=binomial))
-testT30Night <- summary(pool(test30Night), conf.int=T)
-
-# --------------------------------------------------------------------------- ##
 ## BMI continous
 
 ## Modelling numeric difference in bmi between baseline and followup
@@ -429,6 +386,7 @@ test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 #Wald intervals with Robust=T are better for misspecified models.
 #Profile likelihood intervals are better for models that are close to correct (mostly so for smaller sample sizes).
 
+## changes in weight
 
 # -------------------------------------------------------------------------------------------------------------- ##
 ## cross-sectional analyses of self-reported and clusters of night-time smartphone use and BMI in population sample
@@ -547,15 +505,15 @@ confints_PopTrackNoS_mpSix <- cbind(c(lowerClust2,lowerClust3,lowerClust4,lowerC
                               c(estClust2,estClust3,estClust4,estClust5,estClust6),
                               c(upperClust2,upperClust3,upperClust4,upperClust5,upperClust6))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 
 m <- gamlss(bmi~(cluster+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
-# Laver prædiktion:
+# Laver pr?diktion:
 predbmipop_sixmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster","bmi","age","sex","education","occupation","sample_weights","imputation")])
 # Finder MSE: 
 MSEbmipopsixmax <- mean((predbmipop_sixmax - pop_track$bmi[pop_track$imputation!=0])^2)
@@ -595,15 +553,15 @@ confints_PopTrackNoS_mpFour <- cbind(c(lowerClust2,lowerClust3,lowerClust4),
                               c(estClust2,estClust3,estClust4),
                               c(upperClust2,upperClust3,upperClust4))-integrate(function(y) y*dBCCG(x=y,mu=10,sigma=exp(pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+1]),nu=pool_inf_PopTrackNoS_mp$qbar[length(m$mu.coefficients)+length(m$sigma.coefficients)+1]),0,Inf)$value 
 ## prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 
 m <- gamlss(bmi~(cluster.y+age+sex+education+occupation), sigma.formula = ~1, nu.formula =~ 1, weights=sample_weights, data=na.omit(subset(pop_track[,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")],imputation==i)),family = BCCG)
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$mu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[1:length(m$mu.coefficients)]
 m$sigma.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients))] 
 m$nu.coefficients <- pool_inf_PopTrackNoS_mp$qbar[(length(m$mu.coefficients)+length(m$sigma.coefficients)+1):(length(m$mu.coefficients)+length(m$sigma.coefficients)+length(m$nu.coefficients))] 
-# Laver prædiktion:
+# Laver pr?diktion:
 predbmipop_fourmax <- predict(m, newdata = pop_track[pop_track$imputation!=0,c("cluster.y","bmi","age","sex","education","occupation","sample_weights","imputation")])
 # Finder MSE: 
 MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputation!=0])^2)
@@ -622,12 +580,12 @@ Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster+age+sex+education+occ
 modelRandom25No_mpSix <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpSix$estimate[2:6],modelRandom25No_mpSix$`2.5 %`[2:6],modelRandom25No_mpSix$`97.5 %`[2:6]))
 ## Prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 m <- glm((bmi>=25) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$coefficients <- pool(Random25No)$pooled$estimate
-# Laver prædiktion:
+# Laver pr?diktion:
 predpopbin25_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin25_predmaxsix <- mean((expit(predpopbin25_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
@@ -638,12 +596,12 @@ modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpFour$estimate[2:4],modelRandom25No_mpFour$`2.5 %`[2:4],modelRandom25No_mpFour$`97.5 %`[2:4]))
 
 ## Prediction: (hvad bruger vi dette til? (12/09/2022))
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$coefficients <- pool(Random25No)$pooled$estimate
-# Laver prædiktion:
+# Laver pr?diktion:
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
@@ -679,12 +637,12 @@ Random25No <- with(pop_track_mids,glm((bmi>=25) ~ (cluster.y+age+sex+education+o
 modelRandom25No_mpFour <- summary(pool(Random25No), conf.int = T)
 exp(cbind(modelRandom25No_mpFour$estimate[2:4],modelRandom25No_mpFour$`2.5 %`[2:4],modelRandom25No_mpFour$`97.5 %`[2:4]))
 ## Prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 m <- glm((bmi>=25) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$coefficients <- pool(Random25No)$pooled$estimate
-# Laver prædiktion:
+# Laver pr?diktion:
 predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
@@ -700,12 +658,12 @@ Random30No <- with(pop_track_mids,glm((bmi>=30) ~ (cluster+age+sex+education+occ
 modelRandom30No_mpSix <- summary(pool(Random30No), conf.int = T)
 exp(cbind(modelRandom30No_mpSix$estimate[2:6],modelRandom30No_mpSix$`2.5 %`[2:6],modelRandom30No_mpSix$`97.5 %`[2:6]))
 ## Prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 m <- glm((bmi>=30) ~ (cluster+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$coefficients <- pool(Random30No)$pooled$estimate
-# Laver prædiktion:
+# Laver pr?diktion:
 predpopbin30_maxsix <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin30_predmaxsix <- mean((expit(predpopbin30_maxsix)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
@@ -716,12 +674,12 @@ modelRandom30No_mpFour <- summary(pool(Random30No), conf.int = T)
 exp(cbind(modelRandom30No_mpFour$estimate[2:4],modelRandom30No_mpFour$`2.5 %`[2:4],modelRandom30No_mpFour$`97.5 %`[2:4]))
 
 ## Prediction:
-## vi fitter en enkelt model m med de samme kovariater og så erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
-## Vi bruger så objektet m til at lave prædiktion.
+## vi fitter en enkelt model m med de samme kovariater og s? erstatter vi de fittede parametre i den enkelte model med dem fra vores poolede fit.
+## Vi bruger s? objektet m til at lave pr?diktion.
 m <- glm((bmi>=30) ~ (cluster.y+age+sex+education+occupation), weights=sample_weights,family=binomial, data=pop_track[pop_track$imputation==1,])
-# Erstatter estimerede værdier:
+# Erstatter estimerede v?rdier:
 m$coefficients <- pool(Random30No)$pooled$estimate
-# Laver prædiktion:
+# Laver pr?diktion:
 predpopbin30_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin30_predmaxfour <- mean((expit(predpopbin30_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=30))^2)
@@ -775,6 +733,8 @@ clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 ## education
 publish(univariateTable(mobileUseNight ~ education,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseNight ~ occupation,data=clinical_sample, column.percent=TRUE))
+
+
 
 ## BMI
 publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
@@ -942,7 +902,7 @@ dt_ints_mpFour
 
 ## night-time smartphone use 
 
-## Analyses: mobileUseNight and biomarkers (age = age.x??)
+## Analyses: mobileUseNight and biomarkers (age = age.x?? - brug age.y i stedet = kliniske)
 
 dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
 glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
