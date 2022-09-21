@@ -89,7 +89,7 @@ publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
 ## weight
 publish(univariateTable( ~ weight,data=base_data, column.percent=TRUE))
 publish(univariateTable( ~ bmi,data=base_data, column.percent=TRUE))
-
+table(base_data$weight)
 
 ## bmi
 base_data$bmi30 <- (base_data$bmi>=30)
@@ -101,7 +101,6 @@ base_data_mids <- as.mids(base_data,.imp="imputation")
 # --------------------------------------------------------------------------- ##
 #Followup sample - using quartile levels from baseline sample
 
-#table(CSS$mobileUseBeforeSleep, useNA="always")
 table(CSS$mobileUseNight, useNA="always")
 
 ## merge survey and tracking data 
@@ -123,14 +122,21 @@ bmi_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),bmi.
 
 weight_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),weight.base=weight.y,weight.fu=weight.x)
 
-weight_followup$difference <- weight_followup$bmi.fu-weight_followup$bmi.base
+## weight difference between follow-up and baselnie
+weight_followup$difference <- weight_followup$weight.fu-weight_followup$weight.base
 mean(weight_followup$difference[!is.na(weight_followup$difference)])
 
 table(weight_followup$difference)
 
-## difference mellem follow-up og baseline
+## store forskelle i vægt fra baseline til follow-up - tjek datasæt inden imputation!
+weight <- subset(weight_followup, select=c(weight.fu, weight.base, difference))
+
+## difference in BMI mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
 mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
+table(bmi_followup$difference)
+
+BMI <- subset(bmi_followup, select=c(bmi.fu, bmi.base, difference))
 
 ## difference in bmi according to sex
 bmi_followupMen <- subset(bmi_followup, sex.x=="Man")
@@ -140,8 +146,6 @@ table(bmi_followupWomen$sex.x)
 mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
 mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
 
-
-## difference in weight between baseline and follow-up
 
 
 ## bmi 25 or bmi 30
