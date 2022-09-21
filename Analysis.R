@@ -166,13 +166,6 @@ clinical_sample <- left_join(clinical_sample,subject_tracking_clusters,by="useri
 
 #### -------------------------------- ####
 
-#### Write out data files for gamlss bootstrap
-
-#### -------------------------------- ####
-
-
-# --------------------------------------------------------------------------- #
-boot_path <- "S:/SUND-IFSV-SmartSleep/Christoffer/gamlssBootstrap/"
 N_imp <- 25
 M <- 10
 
