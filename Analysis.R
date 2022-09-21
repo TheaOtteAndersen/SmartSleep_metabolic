@@ -76,8 +76,6 @@ unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
 
 clin_data$mobileUseNight <- factor(clin_data$mobileUseNight, levels = c("Never","A few times a month or less","A few times a week","Every night or almost every night"))
 
-
-
 # --------------------------------------------------------------------------- ##
 
 #Baseline data with self-reports
@@ -86,9 +84,12 @@ clin_data$mobileUseNight <- factor(clin_data$mobileUseNight, levels = c("Never",
 base_data$pmpuScale[base_data$mobilephone=="No mobile phone"] <- NA
 
 ## night-time smartphone use
-#publish(univariateTable( ~ mobileUseBeforeSleep,data=base_data, column.percent=TRUE))
-#base_data$mobileUseBeforeSleep <- factor(base_data$mobileUseBeforeSleep, levels = c("Never", "Every month or less", "Once a week", "2-4 times per week", "5-7 times per week"))
 publish(univariateTable( ~ mobileUseNight,data=base_data, column.percent=TRUE))
+
+## weight
+publish(univariateTable( ~ weight,data=base_data, column.percent=TRUE))
+publish(univariateTable( ~ bmi,data=base_data, column.percent=TRUE))
+
 
 ## bmi
 base_data$bmi30 <- (base_data$bmi>=30)
@@ -113,9 +114,19 @@ CSS_track_mids<-as.mids(CSS_track,.imp="imputation",.id="userid")
 #Merging base and followup
 
 #BMI followup difference - match with emailAddress or CS_ID
+table(CSS$weight)
+table(base_data$weight)
+
 #y: base, x: followup
 
 bmi_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
+
+weight_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),weight.base=weight.y,weight.fu=weight.x)
+
+weight_followup$difference <- weight_followup$bmi.fu-weight_followup$bmi.base
+mean(weight_followup$difference[!is.na(weight_followup$difference)])
+
+table(weight_followup$difference)
 
 ## difference mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
@@ -128,6 +139,10 @@ table(bmi_followupWomen$sex.x)
 
 mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
 mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
+
+
+## difference in weight between baseline and follow-up
+
 
 ## bmi 25 or bmi 30
 bmi_followup$basebmi25=(bmi_followup$bmi.base>=25)
@@ -319,6 +334,7 @@ confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNi
 # --------------------------------------------------------------------------- ##
 ## cross-sectional associations between night-time smartphone use and bmi (25, 30) in baseline Citizen Science sample (table 2 in paper)
 # --------------------------------------------------------------------------- ##
+
 
 ## Using the mice package with mids objects
 
