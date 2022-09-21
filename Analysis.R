@@ -727,8 +727,6 @@ clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 publish(univariateTable(mobileUseNight ~ education,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseNight ~ occupation,data=clinical_sample, column.percent=TRUE))
 
-
-
 ## BMI
 publish(univariateTable(mobileUseNight ~ bmi.clinical,data=clinical_sample, column.percent=TRUE))
 
@@ -774,7 +772,6 @@ publish(univariateTable(cluster.y ~ bmi.clinical,data=clinical_sample, column.pe
 
 
 #hdl, ldl, vldl, t_cholesterol, triglycerid, hba1c, (glucose), waist, hip, ratio waist hip, systolic bp og distolic bp 1-3: Ift. selvrapporteringer og tracking clusters
-
 
 #Looks into data
 
