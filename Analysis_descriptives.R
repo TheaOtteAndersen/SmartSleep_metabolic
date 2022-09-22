@@ -341,13 +341,13 @@ prop.table(table(clinical$education))
 
 #recategorise education
 table(clinical$education, useNA="always")
-clinical$educationCat[clinical$education=="long cycle higher education"] <- "High"
-clinical$educationCat[clinical$education=="medium cycle higher education"] <- "High"
-clinical$educationCat[clinical$education=="short cycle higher education"] <- "High"
-clinical$educationCat[clinical$education=="Technical vocational education"] <- "Low"
-clinical$educationCat[clinical$education=="Upper secondary education"] <- "Low"
-clinical$educationCat[clinical$education=="Other"] <- "Low"
-clinical$educationCat[clinical$education=="Primary school"] <- "Low"
+clinical$educationCat[clinical$education=="long cycle higher education"] <- "long cycle higher education"
+clinical$educationCat[clinical$education=="medium cycle higher education"] <- "medium cycle higher education"
+clinical$educationCat[clinical$education=="short cycle higher education"] <- "short cycle higher education/Technical vocational education"
+clinical$educationCat[clinical$education=="Technical vocational education"] <- "short cycle higher education/Technical vocational education"
+clinical$educationCat[clinical$education=="Upper secondary education"] <- "Upper secondary education"
+clinical$educationCat[clinical$education=="Other"] <- "Primary school or other"
+clinical$educationCat[clinical$education=="Primary school"] <- "Primary school or other"
 table(clinical$educationCat, useNA="always")/25
 prop.table(table(clinical$educationCat, useNA="always"))
 
