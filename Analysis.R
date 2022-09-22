@@ -69,7 +69,7 @@ pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
 #clin_data <- full_imp_clinical
 clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
-clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
+clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/R?data/SmartSleepClinicalData.csv")
 ## Er dette det rigtige clinical data? Det er ikke alle fra clin_data der er i clin_clinical og omvendt?
 unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
@@ -120,31 +120,28 @@ table(base_data$weight)
 
 bmi_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),bmi.base=bmi.y,bmi.fu=bmi.x)
 
-weight_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),weight.base=weight.y,weight.fu=weight.x)
+#weight_followup <- rename(inner_join(CSS,base_data,by=c("CS_ID","imputation")),weight.base=weight.y,weight.fu=weight.x)
 
 ## weight difference between follow-up and baselnie
-weight_followup$difference <- weight_followup$weight.fu-weight_followup$weight.base
-mean(weight_followup$difference[!is.na(weight_followup$difference)])
+bmi_followup$differenceWeight <- bmi_followup$weight.y-bmi_followup$weight.x
+mean(bmi_followup$differenceWeight[!is.na(bmi_followup$differenceWeight)])
 
-table(weight_followup$difference)
 
-## store forskelle i v?gt fra baseline til follow-up - tjek datas?t inden imputation!
-weight <- subset(weight_followup, select=c(weight.fu, weight.base, difference))
-weight <- weight[weight_followup$imputation==0,]
-hist(weight_followup$difference, breaks=40)
-hist(weight_followup$difference[bmi_followup$imputation==0],breaks=40)
+## store forskelle i weight from baseline to follow-up
+weight <- subset(bmi_followup, select=c(weight.x, weight.y, differenceWeight))
+weight <- weight[bmi_followup$imputation==0,]
 
 ## difference in BMI mellem follow-up og baseline
 bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
 mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
 table(bmi_followup$difference)
 
+
 BMI <- subset(bmi_followup, select=c(bmi.fu, bmi.base, difference))
 
 ## naming sample_weights and constructing followup_time
 bmi_followup$sample_weights <- bmi_followup$sample_weights.y
 bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
-
 
 ## subset according to non-missing weight in the unimputed data
 bmi_followup_complete <- subset(bmi_followup, imputation == 0 & !(is.na(height.x) | is.na(height.y)))
@@ -160,6 +157,27 @@ bmi_followupWomen <- subset(bmi_followup_complete, sex.x=="Woman")
 
 mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference) & bmi_followupMen$imputation!=0])
 mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference) & bmi_followupWomen$imputation!=0])
+
+## difference in BMI and weight
+table(bmi_followup_work$differenceWeight)
+table(bmi_followup_work$difference)
+
+## difference in bmi and weight according to sex
+bmi_followupMen <- subset(bmi_followup_work, sex.x=="Man")
+bmi_followupWomen <- subset(bmi_followup_work, sex.x=="Woman")
+
+## mean difference in men and women (BMI and weight)
+## BMI
+mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
+mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
+
+## Weight
+mean(bmi_followupMen$differenceWeight[!is.na(bmi_followupMen$differenceWeight)])
+mean(bmi_followupWomen$differenceWeight[!is.na(bmi_followupWomen$differenceWeight)])
+
+BMI <- subset(bmi_followup_work, select=c(bmi.fu, bmi.base, difference))
+weight <- subset(bmi_followup_work, select=c(weight.x, weight.y, differenceWeight))
+
 
 ## Assigning mids objects
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
