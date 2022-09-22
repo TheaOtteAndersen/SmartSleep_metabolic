@@ -152,14 +152,14 @@ bmi_followup_complete <- subset(bmi_followup_complete, imputation == 0 & !(is.na
 
 bmi_followup_complete <- subset(bmi_followup, userid %in% bmi_followup_complete$userid) # 1768 are left from the total of 1885.
 
+BMIcomplete <- subset(bmi_followup_complete, select=c(bmi.fu, bmi.base, difference,weight.x,weight.y,height.x,height.y))
 
 ## difference in bmi and weight according to sex
-bmi_followupMen <- subset(bmi_followup, sex.x=="Man")
-bmi_followupWomen <- subset(bmi_followup, sex.x=="Woman")
-table(bmi_followupWomen$sex.x)
+bmi_followupMen <- subset(bmi_followup_complete, sex.x=="Man")
+bmi_followupWomen <- subset(bmi_followup_complete, sex.x=="Woman")
 
-mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
-mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
+mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference) & bmi_followupMen$imputation!=0])
+mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference) & bmi_followupWomen$imputation!=0])
 
 ## Assigning mids objects
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
