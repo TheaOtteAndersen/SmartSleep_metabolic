@@ -69,7 +69,7 @@ pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
 #clin_data <- full_imp_clinical
 clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
-clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/R?data/SmartSleepClinicalData.csv")
+clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
 ## Er dette det rigtige clinical data? Det er ikke alle fra clin_data der er i clin_clinical og omvendt?
 unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
@@ -141,7 +141,19 @@ table(bmi_followup$difference)
 
 BMI <- subset(bmi_followup, select=c(bmi.fu, bmi.base, difference))
 
-## difference in bmi according to sex
+## naming sample_weights and constructing followup_time
+bmi_followup$sample_weights <- bmi_followup$sample_weights.y
+bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
+
+
+## subset according to non-missing weight in the unimputed data
+bmi_followup_work <- subset(bmi_followup, imputation == 0 & !(is.na(height.x) | is.na(height.y)))
+bmi_followup_work <- subset(bmi_followup_work, imputation == 0 & !(is.na(weight.x) | is.na(weight.y)))
+
+bmi_followup_work <- subset(bmi_followup, userid %in% bmi_followup_work$userid) # 1768 people left.
+
+
+## difference in bmi and weight according to sex
 bmi_followupMen <- subset(bmi_followup, sex.x=="Man")
 bmi_followupWomen <- subset(bmi_followup, sex.x=="Woman")
 table(bmi_followupWomen$sex.x)
@@ -149,13 +161,9 @@ table(bmi_followupWomen$sex.x)
 mean(bmi_followupMen$difference[!is.na(bmi_followupMen$difference)])
 mean(bmi_followupWomen$difference[!is.na(bmi_followupWomen$difference)])
 
-
-
-## naming sample_weights and constructing followup_time
-bmi_followup$sample_weights <- bmi_followup$sample_weights.y
-bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
-
+## Assigning mids objects
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
+bmi_followup_work_mids <- as.mids(bmi_followup_work,.imp="imputation")
 
 # --------------------------------------------------------------------------- ##
 #Population sample
@@ -183,7 +191,13 @@ clinical_sample <- rename(left_join(clin_data,rename(clin_clinical,PNR=cpr),by="
 ## merge with tracking data
 clinical_sample <- left_join(clinical_sample,subject_tracking_clusters,by="userid")
 
+## Relevelling rare categories
+clinical_sample$educationW <- clinical_sample$education
+clinical_sample$educationW[clinical_sample$education %in% c("Technical vocational education", "short cycle higher education")] <- "Technical vocational education or short cycle higher education"
+clinical_sample$educationW[clinical_sample$education %in% c("Primary school", "Other")] <- "Primary school or other"
 
+clinical_sample$occupationW <- clinical_sample$occupation
+clinical_sample$occupationW[!(clinical_sample$occupation %in% c("employed","student"))] <- "Other"
 
 #### -------------------------------- ####
 
@@ -364,7 +378,8 @@ exp(model25Night$`97.5 %`))
 ## BMI continous
 
 ## Modelling numeric difference in bmi between baseline and followup
-hist(bmi_followup$difference,xlim=c(-10,10),breaks=600,ylim=c(0,2500))
+hist(bmi_followup_work$difference,xlim=c(-10,10),breaks=100)
+hist(bmi_followup_work$weight.x-bmi_followup_work$weight.y,xlim=c(-10,10),breaks=100)
 
 plot(fitted(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
      residuals(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
@@ -373,12 +388,12 @@ hist(residuals(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y
 ## smartphone use during sleep period and changes in BMI:
 m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
-model_summary_diff_Night <- summary(pool(with(bmi_followup_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+model_summary_diff_Night <- summary(pool(with(bmi_followup_work_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 
 cbind(model_summary_diff_Night$estimate[18:20],model_summary_diff_Night$`2.5 %`[18:20],model_summary_diff_Night$`97.5 %`[18:20])
 
 ## test for trend (mobileUseNight)
-test_numNight <- with(bmi_followup_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
+test_numNight <- with(bmi_followup_work_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
@@ -387,6 +402,18 @@ test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 #Profile likelihood intervals are better for models that are close to correct (mostly so for smaller sample sizes).
 
 ## changes in weight
+
+## smartphone use during sleep period and changes in BMI:
+m <- lm(weight.x~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
+
+model_summary_weightdiff_Night <- summary(pool(with(bmi_followup_work_mids,lm(weight.x~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))), conf.int = T)
+
+cbind(model_summary_weightdiff_Night$estimate[18:20],model_summary_weightdiff_Night$`2.5 %`[18:20],model_summary_weightdiff_Night$`97.5 %`[18:20])
+
+## test for trend (mobileUseNight)
+test_numNightWeight <- with(bmi_followup_work_mids,lm(weight.x~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))
+test_TnumNightWeight <- summary(pool(test_numNightWeight), conf.int=T)
+
 
 # -------------------------------------------------------------------------------------------------------------- ##
 ## cross-sectional analyses of self-reported and clusters of night-time smartphone use and BMI in population sample
@@ -730,9 +757,9 @@ table(clinical_sample$imputation)
 publish(univariateTable(mobileUseNight ~ age.y,data=clinical_sample, column.percent=TRUE))
 clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 
-## education
-publish(univariateTable(mobileUseNight ~ education,data=clinical_sample, column.percent=TRUE))
-publish(univariateTable(mobileUseNight ~ occupation,data=clinical_sample, column.percent=TRUE))
+## educationW
+publish(univariateTable(mobileUseNight ~ educationW,data=clinical_sample, column.percent=TRUE))
+publish(univariateTable(mobileUseNight ~ occupationW,data=clinical_sample, column.percent=TRUE))
 
 
 
@@ -842,27 +869,27 @@ clinical_mids <- as.mids(clinical_sample,.imp="imputation",.id="userid")
 
 ## Maximal posterior probability assignment: Six clusters (we use four clusters for clinical sample!)
 
-dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
 df_ints_mpSix <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
 
@@ -871,27 +898,27 @@ names(df_ints_mpSix) <- c("hdl","ldl","vldl","t_chol","tri","hba1c","dbp","sbp",
 
 ## Maximal posterior probability assignment: Four clusters
 
-dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+dbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(dbp) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+glu_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+hba1c_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+hdl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+ldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+t_chol_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+sbp_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+tri_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+vldl_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(vldl) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+wh_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
-bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster.y+age+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
+bmi_int <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ cluster.y+age+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]#cbind(bmi_sum[,1]-1.96*bmi_sum[,2],bmi_sum[,1]+1.96*bmi_sum[,2])
 
 ## estimater for four clusters i clinical sample
 df_ints_mpFour <- list(hdl_int,ldl_int,vldl_int,t_chol_int,tri_int,hba1c_int,dbp_int,sbp_int,wh_int,glu_int,bmi_int)
@@ -904,17 +931,17 @@ dt_ints_mpFour
 
 ## Analyses: mobileUseNight and biomarkers (age = age.x?? - brug age.y i stedet = kliniske)
 
-dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
-bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age.x+education+occupation,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+dbp_intsNight <- summary(pool(with(data=clinical_mids, lm(dbp ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+glu_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(glucose) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hba1c_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hba1c) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+hdl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(hdl) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+ldl_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ldl) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+t_chol_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(t_cholesterol) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+sbp_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(sbp) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+tri_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(triglycerids) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+vldl_intsNight <- summary(pool(with(data=clinical_mids,lm(as.numeric(vldl) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit,family=Gamma))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+wh_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(ratiowaisthip) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
+bmi_intsNight <- summary(pool(with(data=clinical_mids, lm(as.numeric(bmi.clinical) ~ mobileUseNight+age.x+educationW+occupationW,na.action=na.omit))),conf.int=T)[,c("estimate","2.5 %", "97.5 %","p.value")]
 
 
 df_intsNight <- data.frame(rbind(hdl_intsNight[2,],ldl_intsNight[2,],vldl_intsNight[2,],t_chol_intsNight[2,],tri_intsNight[2,],hba1c_intsNight[2,],dbp_intsNight[2,],sbp_intsNight[2,],wh_intsNight[2,],glu_intsNight[2,],bmi_intsNight[2,]),
