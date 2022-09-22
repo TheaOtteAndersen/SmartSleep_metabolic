@@ -144,10 +144,10 @@ bmi_followup$sample_weights <- bmi_followup$sample_weights.y
 bmi_followup$followup_time <- (as.Date(str_c(substr(bmi_followup$EndDate,7,10),"-",substr(bmi_followup$EndDate,4,5),"-",substr(bmi_followup$EndDate,1,2)))-as.Date(str_c(substr(bmi_followup$responseDate.y,7,10),"-",substr(bmi_followup$responseDate.y,4,5),"-",substr(bmi_followup$responseDate.y,1,2))))/365.25
 
 ## subset according to non-missing weight in the unimputed data
-bmi_followup_work <- subset(bmi_followup, imputation == 0 & !(is.na(height.x) | is.na(height.y)))
-bmi_followup_work <- subset(bmi_followup_work, imputation == 0 & !(is.na(weight.x) | is.na(weight.y)))
+bmi_followup_complete <- subset(bmi_followup, imputation == 0 & !(is.na(height.x) | is.na(height.y)))
+bmi_followup_complete <- subset(bmi_followup_complete, imputation == 0 & !(is.na(weight.x) | is.na(weight.y)))
 
-bmi_followup_work <- subset(bmi_followup, userid %in% bmi_followup_work$userid) # 1768 people left.
+bmi_followup_complete <- subset(bmi_followup, userid %in% bmi_followup_complete$userid) # 1768 are left from the total of 1885.
 
 
 ## difference in BMI and weight
@@ -173,7 +173,7 @@ weight <- subset(bmi_followup_work, select=c(weight.x, weight.y, differenceWeigh
 
 ## Assigning mids objects
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
-bmi_followup_work_mids <- as.mids(bmi_followup_work,.imp="imputation")
+bmi_followup_complete_mids <- as.mids(bmi_followup_complete,.imp="imputation")
 
 # --------------------------------------------------------------------------- ##
 #Population sample
@@ -388,8 +388,8 @@ exp(model25Night$`97.5 %`))
 ## BMI continous
 
 ## Modelling numeric difference in bmi between baseline and followup
-hist(bmi_followup_work$difference,xlim=c(-10,10),breaks=100)
-hist(bmi_followup_work$weight.x-bmi_followup_work$weight.y,xlim=c(-10,10),breaks=100)
+hist(bmi_followup_complete$difference,xlim=c(-10,10),breaks=100)
+hist(bmi_followup_complete$weight.x-bmi_followup_complete$weight.y,xlim=c(-10,10),breaks=100)
 
 plot(fitted(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))),
      residuals(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y+gender.y+education.y+occupation.y+bmi.base), weights=sample_weights.y, data=subset(bmi_followup,imputation==5))))
@@ -398,12 +398,12 @@ hist(residuals(lm(difference~(mobileUseNight.y:followup_time+followup_time+age.y
 ## smartphone use during sleep period and changes in BMI:
 m <- lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
-model_summary_diff_Night <- summary(pool(with(bmi_followup_work_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
+model_summary_diff_Night <- summary(pool(with(bmi_followup_complete_mids,lm(bmi.fu~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))), conf.int = T)
 
 cbind(model_summary_diff_Night$estimate[18:20],model_summary_diff_Night$`2.5 %`[18:20],model_summary_diff_Night$`97.5 %`[18:20])
 
 ## test for trend (mobileUseNight)
-test_numNight <- with(bmi_followup_work_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
+test_numNight <- with(bmi_followup_complete_mids,lm(bmi.fu~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+bmi.base),weights=sample_weights))
 test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 
 
@@ -416,12 +416,12 @@ test_TnumNight <- summary(pool(test_numNight), conf.int=T)
 ## smartphone use during sleep period and changes in BMI:
 m <- lm(weight.x~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights,data=na.omit(bmi_followup[bmi_followup$imputation==1,c("difference","mobileUseNight.y","age.y","gender.y","education.y","occupation.y","followup_time","sample_weights","bmi.base","bmi.fu")]))
 
-model_summary_weightdiff_Night <- summary(pool(with(bmi_followup_work_mids,lm(weight.x~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))), conf.int = T)
+model_summary_weightdiff_Night <- summary(pool(with(bmi_followup_complete_mids,lm(weight.x~((mobileUseNight.y):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))), conf.int = T)
 
 cbind(model_summary_weightdiff_Night$estimate[18:20],model_summary_weightdiff_Night$`2.5 %`[18:20],model_summary_weightdiff_Night$`97.5 %`[18:20])
 
 ## test for trend (mobileUseNight)
-test_numNightWeight <- with(bmi_followup_work_mids,lm(weight.x~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))
+test_numNightWeight <- with(bmi_followup_complete_mids,lm(weight.x~((as.numeric(mobileUseNight.y)):as.numeric(followup_time)+as.numeric(followup_time)+age.y+gender.y+education.y+occupation.y+weight.y),weights=sample_weights))
 test_TnumNightWeight <- summary(pool(test_numNightWeight), conf.int=T)
 
 
