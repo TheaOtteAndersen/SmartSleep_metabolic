@@ -230,12 +230,14 @@ prop.table(table(base_data$bmiCat))
 table(base_data$mobileUseNight, base_data$bmiCat)/25
 publish(univariateTable(mobileUseNight ~ bmiCat,data=base_data, column.percent=TRUE))
 
+publish(univariateTable(mobileUseNight ~ bmi,data=base_data, column.percent=TRUE))
+
 # --------------------------------------------------------------------------- ##
 
 
 ## Population Sample
 setwd("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Population Sample")
-popu <- read.table("imp_population.csv", header=TRUE, fill=TRUE, sep=";", stringsAsFactors = TRUE, strip.white = TRUE)
+popu <- read.table("imp_population.csv", header=TRUE, fill=TRUE, stringsAsFactors = TRUE, strip.white = TRUE, sep=";")
 
 table(popu$imputation, useNA = "always")
 popu <- subset(popu,imputation!=0)
@@ -255,7 +257,7 @@ publish(univariateTable( ~ agePNR,data=popu, column.percent=TRUE))
 ## SD for pooled mean age
 sqrt( mean(aggregate(subset(popu,imputation!=0)$agePNR,by=list(subset(popu,imputation!=0)$imputation),FUN=var)$x)+sum((aggregate(subset(popu,imputation!=0)$agePNR,by=list(subset(popu,imputation!=0)$imputation),FUN=mean)$x-mean(subset(popu,imputation!=0)$agePNR))^2)/19
 )
-names(popu)
+
 
 ## sex
 table(popu$sex, useNA="always")/25
@@ -269,14 +271,14 @@ prop.table(table(popu$education))
 table(popu$occupation, useNA="always")/25
 prop.table(table(popu$occupation))
 
-
-## self-reported smartphone use before sleep onset
-table(popu$mobileUseBeforeSleep, useNA="always")/25
-publish(univariateTable( ~ mobileUseBeforeSleep,data=popu, column.percent=TRUE))
-
 ## night-time smartphone use
 table(popu$mobileUseNight, useNA="always")/25
 publish(univariateTable( ~ mobileUseNight,data=popu, column.percent=TRUE))
+
+## bmi
+popu$bmi <- as.numeric(popu$bmi)
+table(popu$bmi)
+publish(univariateTable(mobileUseNight ~ bmi,data=popu, column.percent=TRUE))
 
 ##---------------------------------------------------------------------------##
 ## confounders according to night-time smartphone use
