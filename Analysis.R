@@ -69,7 +69,7 @@ pop_data$mobileUseNight <- factor(pop_data$mobileUseNight, levels = c("Never","A
 #load("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/full_imp_clinical.RData")
 #clin_data <- full_imp_clinical
 clin_data <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/Data imputation/Data/Renset imputation/Clinical Sample/imp_clinical.csv")
-clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/R?data/SmartSleepClinicalData.csv")
+clin_clinical <- read.csv2("S:/SUND-IFSV-SmartSleep/Data cleaning/SmartSleep Clinical/Data/Rådata/SmartSleepClinicalData.csv")
 ## Er dette det rigtige clinical data? Det er ikke alle fra clin_data der er i clin_clinical og omvendt?
 unique(clin_data$PNR[!clin_data$PNR %in% clin_clinical$cpr])
 unique(clin_clinical$cpr[!clin_clinical$cpr %in% clin_data$PNR])
@@ -194,6 +194,7 @@ pop_track$cluster.y <- factor(pop_track$cluster.y,levels = c("Cluster 3", "Clust
 
 pop_track_mids<-as.mids(pop_track,.imp="imputation",.id="userid")
 
+# --------------------------------------------------------------------------- ##
 ## Clinical Data
 
 ## merge survey and clinical data
