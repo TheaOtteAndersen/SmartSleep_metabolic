@@ -95,6 +95,16 @@ table(base_data$height[base_data$imputation==0])
 base_data$bmi30 <- (base_data$bmi>=30)
 base_data$bmi25 <- (base_data$bmi>=25)
 
+#sleep quality (catogise)
+summary(base_data$sleepQualityScale)
+base_data$sleepQuality4[base_data$sleepQualityScale<=2] <- "Q1"
+base_data$sleepQuality4[base_data$sleepQualityScale>2 & base_data$sleepQualityScale <=2.75] <- "Q2"
+base_data$sleepQuality4[base_data$sleepQualityScale>2.75 & base_data$sleepQualityScale<=3.5] <- "Q3"
+base_data$sleepQuality4[base_data$sleepQualityScale>3.5] <- "Q4"
+table(base_data$sleepQuality4, useNA="always")/25
+
+
+## assigns mids objects
 base_data_mids <- as.mids(base_data,.imp="imputation")
 
 
@@ -136,7 +146,6 @@ bmi_followup$difference <- bmi_followup$bmi.fu-bmi_followup$bmi.base
 mean(bmi_followup$difference[!is.na(bmi_followup$difference)])
 table(bmi_followup$difference)
 
-
 BMI <- subset(bmi_followup, select=c(bmi.fu, bmi.base, difference))
 
 ## naming sample_weights and constructing followup_time
@@ -149,7 +158,6 @@ bmi_followup_complete <- subset(bmi_followup_complete, imputation == 0 & !(is.na
 
 bmi_followup_complete <- subset(bmi_followup, userid %in% bmi_followup_complete$userid) # 1768 are left from the total of 1885.
 
-
 ## difference in BMI and weight
 table(bmi_followup_work$differenceWeight)
 table(bmi_followup_work$difference)
@@ -157,6 +165,9 @@ table(bmi_followup_work$difference)
 ## difference in bmi and weight according to sex
 bmi_followupMen <- subset(bmi_followup_work, sex.x=="Man")
 bmi_followupWomen <- subset(bmi_followup_work, sex.x=="Woman")
+
+bmi_followupMen <- subset(bmi_followup_complete, sex.x=="Man")
+bmi_followupWomen <- subset(bmi_followup_complete, sex.x=="Woman")
 
 ## mean difference in men and women (BMI and weight)
 ## BMI
@@ -170,7 +181,6 @@ mean(bmi_followupWomen$differenceWeight[!is.na(bmi_followupWomen$differenceWeigh
 BMI <- subset(bmi_followup_work, select=c(bmi.fu, bmi.base, difference))
 weight <- subset(bmi_followup_work, select=c(weight.x, weight.y, differenceWeight))
 
-
 ## Assigning mids objects
 bmi_followup_mids <- as.mids(bmi_followup,.imp="imputation")
 bmi_followup_complete_mids <- as.mids(bmi_followup_complete,.imp="imputation")
@@ -180,6 +190,15 @@ bmi_followup_complete_mids <- as.mids(bmi_followup_complete,.imp="imputation")
 
 ##
 table(pop_data$mobileUseNight, useNA="always")
+
+#sleep quality (catogise)
+summary(pop_data$sleepQualityScale)
+pop_data$sleepQuality4[pop_data$sleepQualityScale<=2] <- "Q1"
+pop_data$sleepQuality4[pop_data$sleepQualityScale>2 & pop_data$sleepQualityScale <=2.5] <- "Q2"
+pop_data$sleepQuality4[pop_data$sleepQualityScale>2.763 & pop_data$sleepQualityScale<=3.5] <- "Q3"
+pop_data$sleepQuality4[pop_data$sleepQualityScale>3.5] <- "Q4"
+table(pop_data$sleepQuality4, useNA="always")/25
+
 
 ## merge tracking and survey data for population sample
 pop_track <- left_join(pop_data,subject_tracking_clusters,by="userid")
@@ -235,7 +254,7 @@ hist(sqrt(CSS$bmi),breaks=40)
 hist(CSS$age,breaks=40)
 hist(CSS$height,breaks=40)
 hist(CSS$weight,breaks=40)
-
+hist(CSS$sleepQualityScale,breaks=40)
 
 bmi_ids <- CSS$CS_ID[which(is.na(CSS$bmi))]
 cor(CSS$bmi[CSS$CS_ID%in% bmi_ids][115:length(CSS$bmi[CSS$CS_ID%in% bmi_ids])],(CSS$weight/((CSS$height/100)^2))[CSS$CS_ID%in% bmi_ids][115:length(CSS$bmi[CSS$CS_ID%in% bmi_ids])])
@@ -249,7 +268,7 @@ hist(sqrt(base_data$bmi),breaks=40)
 hist(base_data$age,breaks=40)
 hist(base_data$height,breaks=40)
 hist(base_data$weight,breaks=40)
-
+hist(base_data$sleepQualityScale,breaks=40)
 
 # --------------------------------------------------------------------------- ##
 # --------------------------------------------------------------------------- ##
@@ -347,11 +366,23 @@ confints_baseTrend <-rbind(c(lowerCatTrendNight,estCatTrendNight,upperCatTrendNi
 
 
 # --------------------------------------------------------------------------- ##
-## cross-sectional associations between night-time smartphone use and bmi (25, 30) in baseline Citizen Science sample (table 2 in paper)
+## cross-sectional associations between sleep, night-time smartphone use and bmi (25, 30) in baseline Citizen Science sample (table 2 in paper)
 # --------------------------------------------------------------------------- ##
 
 ## Using the mice package with mids objects
 
+## sleep quality and overweight/obesity
+mod25_sleep <- with(base_data_mids,glm(bmi25~(sleepQuality4+age+gender+education+occupation+mobileUseNight), weights=sample_weights,family=binomial))
+mod30_sleep <- with(base_data_mids,glm(bmi30~(sleepQuality4+age+gender+education+occupation+mobileUseNight), weights=sample_weights,family=binomial))
+
+# OR for sleep and overweight
+overweight_sleep <- summary(pool(mod25_sleep), conf.int=T)
+cbind(exp(overweight_sleep$estimate),exp(overweight_sleep$`2.5 %`),exp(overweight_sleep$`97.5 %`))
+
+## OR for sleep and obesity
+obese_sleep <- summary(pool(mod30_sleep), conf.int=T)
+cbind(exp(obese_sleep$estimate),exp(obese_sleep$`2.5 %`),exp(obese_sleep$`97.5 %`))
+##==============================================================================
 # smartphone use during the sleep period:
 mod25 <- with(base_data_mids,glm(bmi25~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
 mod30 <- with(base_data_mids,glm(bmi30~(mobileUseNight+age+gender+education+occupation), weights=sample_weights,family=binomial))
@@ -608,6 +639,9 @@ MSEbmipopfourmax <- mean((predbmipop_fourmax - pop_track$bmi[pop_track$imputatio
 ### Binary Outcomes for population sample
 # --------------------------------------------------------------------------- ##
 
+
+
+
 ## BMI > 25
 
 ## Maximal posterior probability assignment
@@ -643,7 +677,7 @@ predpopbin25_maxfour <- predict(m,newdata = pop_track[pop_track$imputation!=0,])
 # Finder MSE: 
 MSEpopbin25_predmaxfour <- mean((expit(predpopbin25_maxfour)-(pop_track$bmi[pop_track$imputation!=0]>=25))^2)
 
-
+## ===========================================================================
 ## smartphone use during the sleep period and BMI>25 in population sample
 summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))),conf.int=T)
 Random25NoTNight <- with(pop_track_mids,glm((bmi>=25) ~ (mobileUseNight+age+sex+education+occupation), weights=sample_weights,family=binomial))
@@ -654,6 +688,14 @@ cbind(exp(modelRandom25NoTNight$estimate[2:4]),exp(modelRandom25NoTNight$`2.5 %`
 ## smartphone use during the sleep period and BMI > 25
 Random25NoTestNight <- with(pop_track_mids,glm((bmi>=25) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random25NoTestNight), conf.int=T)
+
+## ============================================================================
+## sleep and overweight 
+summary(pool(with(pop_track_mids,glm((bmi>=25) ~ (sleepQuality4+age+sex+education+occupation+mobileUseNight), weights=sample_weights,family=binomial))),conf.int=T)
+PopSleepOverweight <- with(pop_track_mids,glm((bmi>=25) ~ (sleepQuality4+age+sex+education+occupation+mobileUseNight), weights=sample_weights,family=binomial))
+Overweight_sleep_pop <- summary(pool(PopSleepOverweight), conf.int=T)
+cbind(exp(Overweight_sleep_pop$estimate[2:4]),exp(Overweight_sleep_pop$`2.5 %`[2:4]),exp(Overweight_sleep_pop$`97.5 %`[2:4]))
+
 
 # --------------------------------------------------------------------------- ##
 ## sensitivity analyses (further adjusting for physical activity)
@@ -735,9 +777,13 @@ cbind(exp(modelRandom30NoTNight$estimate),
 Random30NoTestNight <- with(pop_track_mids,glm((bmi>=30) ~ (as.numeric(mobileUseNight)+age+sex+education+occupation), weights=sample_weights,family=binomial))
 summary(pool(Random30NoTestNight), conf.int=T)
 
-
-
-
+##============================================================================
+# sleep and obesity
+obesity_pop <- with(pop_track_mids,glm((bmi>=30) ~ (sleepQuality4+age+sex+education+occupation+mobileUseNight), weights=sample_weights,family=binomial))
+sleep_obesity_pop <- summary(pool(obesity_pop), conf.int=T)
+cbind(exp(sleep_obesity_pop$estimate),
+      exp(sleep_obesity_pop$`2.5 %`),
+      exp(sleep_obesity_pop$`97.5 %`))[2:4,]
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -770,7 +816,6 @@ clinical_sample$age.x <- as.numeric(clinical_sample$age.x)
 ## educationW
 publish(univariateTable(mobileUseNight ~ educationW,data=clinical_sample, column.percent=TRUE))
 publish(univariateTable(mobileUseNight ~ occupationW,data=clinical_sample, column.percent=TRUE))
-
 
 
 ## BMI
